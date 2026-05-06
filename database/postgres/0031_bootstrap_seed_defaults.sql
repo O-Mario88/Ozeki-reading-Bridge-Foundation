@@ -99,12 +99,16 @@ INSERT INTO schools_directory (
   contact_email,
   school_status,
   current_partner_type,
-  account_record_type,
-  school_type,
-  parent_account_label,
   enrollment_total,
   enrolled_learners
 )
+-- NOTE: account_record_type and parent_account_label were intentionally
+-- removed here — they were originally added by 0020, dropped by 0039, and
+-- 0020 was later corrected to no longer ADD them (per the 1600-column
+-- attribute-leak comment in 0020). school_type was also removed because
+-- it was dropped by 0039 and not reinstated until 0074, which runs AFTER
+-- this seed. The fresh-DB bootstrap path doesn't need any of them, and
+-- 0074 will add school_type back as a NULL column for the seed row.
 VALUES (
   900001,
   'sch-bootstrap-demo',
@@ -123,9 +127,6 @@ VALUES (
   'headteacher.bootstrap@ozekireadingbridge.org',
   'Open',
   'NA',
-  'School',
-  'School',
-  'Uganda',
   120,
   120
 )
