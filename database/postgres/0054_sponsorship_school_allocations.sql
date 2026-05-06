@@ -2,73 +2,87 @@
 -- Creates true referential integrity between sponsorships/donations and the
 -- specific schools they fund, enabling donor-outcome chains.
 --
--- 2026-05-06 amendment: this migration depends on the `sponsorships` and
--- `donations` tables, which are NOT created by any database/postgres/*.sql
--- file — they were originally provisioned by the runtime endpoint
--- /api/migrate/sponsorships against legacy databases. On a fresh
--- Railway-style bootstrap those tables don't exist when this file runs, so
--- the FK + trigger setup blew up the whole bootstrap (commit 3c21739e
--- chased the same kind of ordering bug in 0031). The migration is now
--- wrapped in conditional checks: if the upstream tables are missing, the
--- whole thing is a no-op. Once /api/migrate/sponsorships (or a future SQL
--- file that creates the rich sponsorships schema) has run, re-running the
--- bootstrap will pick up the allocations on the second pass.
+-- 2026-05-06: this migration depends on the `sponsorships` and `donations`
+-- tables, which are NOT created by any database/postgres/*.sql file — they
+-- come from the runtime endpoint /api/migrate/sponsorships against legacy
+-- databases. On a fresh Railway-style bootstrap they don't exist when 0054
+-- runs, so the FK + trigger setup blew up the whole bootstrap (failedFile
+-- with appliedBeforeFailure list of 56 files).
+--
+-- Restructured fix:
+--   1. Create the allocations table unconditionally (no FK clauses inline)
+--   2. Add the sponsorship_id / donation_id foreign keys *after* the fact,
+--      only when their upstream tables exist
+--   3. Create indexes unconditionally (table is always present now)
+--   4. Create the trigger function and trigger only when sponsorships exists
+--
+-- This is fully idempotent: re-running after /api/migrate/sponsorships has
+-- created the upstream tables fills in the FKs and trigger correctly.
 
-DO $$
-DECLARE
-  has_sponsorships BOOLEAN;
-  has_donations BOOLEAN;
-BEGIN
-  has_sponsorships := EXISTS (
-    SELECT 1 FROM information_schema.tables
-    WHERE table_schema = 'public' AND table_name = 'sponsorships'
-  );
-  has_donations := EXISTS (
-    SELECT 1 FROM information_schema.tables
-    WHERE table_schema = 'public' AND table_name = 'donations'
-  );
-
-  IF NOT has_sponsorships AND NOT has_donations THEN
-    RAISE NOTICE
-      '[0054_sponsorship_school_allocations] sponsorships and donations tables not present — skipping. Run /api/migrate/sponsorships then re-run bootstrap to create the allocations ledger.';
-    RETURN;
-  END IF;
-
-  -- Build the FK clauses dynamically so we only reference tables that exist.
-  -- Postgres EXECUTE pattern lets us assemble the CREATE TABLE as a string.
-  EXECUTE format(
-    $f$
-      CREATE TABLE IF NOT EXISTS sponsorship_school_allocations (
-        id SERIAL PRIMARY KEY,
-        sponsorship_id INTEGER %s,
-        donation_id INTEGER %s,
-        school_id INTEGER NOT NULL REFERENCES schools_directory(id) ON DELETE CASCADE,
-        allocation_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
-        allocation_currency TEXT NOT NULL DEFAULT 'UGX',
-        allocation_method TEXT NOT NULL DEFAULT 'equal_split'
-          CHECK (allocation_method IN ('direct', 'equal_split', 'enrollment_weighted', 'manual')),
-        allocated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        allocated_by_user_id INTEGER REFERENCES portal_users(id),
-        notes TEXT,
-        CHECK (sponsorship_id IS NOT NULL OR donation_id IS NOT NULL)
-      )
-    $f$,
-    CASE WHEN has_sponsorships THEN 'REFERENCES sponsorships(id) ON DELETE CASCADE' ELSE '' END,
-    CASE WHEN has_donations THEN 'REFERENCES donations(id) ON DELETE CASCADE' ELSE '' END
-  );
-END $$;
+CREATE TABLE IF NOT EXISTS sponsorship_school_allocations (
+  id SERIAL PRIMARY KEY,
+  sponsorship_id INTEGER,
+  donation_id INTEGER,
+  school_id INTEGER NOT NULL REFERENCES schools_directory(id) ON DELETE CASCADE,
+  allocation_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+  allocation_currency TEXT NOT NULL DEFAULT 'UGX',
+  allocation_method TEXT NOT NULL DEFAULT 'equal_split'
+    CHECK (allocation_method IN ('direct', 'equal_split', 'enrollment_weighted', 'manual')),
+  allocated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  allocated_by_user_id INTEGER REFERENCES portal_users(id),
+  notes TEXT,
+  CHECK (sponsorship_id IS NOT NULL OR donation_id IS NOT NULL)
+);
 
 CREATE INDEX IF NOT EXISTS idx_ssa_sponsorship ON sponsorship_school_allocations(sponsorship_id);
 CREATE INDEX IF NOT EXISTS idx_ssa_donation ON sponsorship_school_allocations(donation_id);
 CREATE INDEX IF NOT EXISTS idx_ssa_school ON sponsorship_school_allocations(school_id);
 
--- Auto-allocation function: when a sponsorship is paid, split across schools in scope.
--- Only created when the sponsorships table exists — the function references columns
--- on sponsorships and would fail at parse time otherwise.
+-- Add FKs to sponsorships / donations only when those upstream tables exist.
+-- The constraint name pattern matches what Postgres would generate inline so
+-- a later DROP TABLE CASCADE behaves the same way.
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='sponsorships') THEN
-    RAISE NOTICE '[0054] skipping auto_allocate_sponsorship function — sponsorships table absent';
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'sponsorships'
+  ) THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint
+      WHERE conname = 'sponsorship_school_allocations_sponsorship_id_fkey'
+    ) THEN
+      ALTER TABLE sponsorship_school_allocations
+        ADD CONSTRAINT sponsorship_school_allocations_sponsorship_id_fkey
+        FOREIGN KEY (sponsorship_id) REFERENCES sponsorships(id) ON DELETE CASCADE;
+    END IF;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'donations'
+  ) THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint
+      WHERE conname = 'sponsorship_school_allocations_donation_id_fkey'
+    ) THEN
+      ALTER TABLE sponsorship_school_allocations
+        ADD CONSTRAINT sponsorship_school_allocations_donation_id_fkey
+        FOREIGN KEY (donation_id) REFERENCES donations(id) ON DELETE CASCADE;
+    END IF;
+  END IF;
+END $$;
+
+-- Auto-allocation function + trigger only when the sponsorships table exists.
+-- The function references columns on sponsorships and would fail to compile
+-- otherwise. Built via dynamic EXECUTE so plpgsql doesn't plan-check column
+-- references at function-definition time.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'sponsorships'
+  ) THEN
+    RAISE NOTICE '[0054] sponsorships table absent — skipping auto_allocate_sponsorship function + trigger. Re-run bootstrap after /api/migrate/sponsorships.';
     RETURN;
   END IF;
 
