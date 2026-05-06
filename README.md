@@ -59,7 +59,9 @@ EMIS sync, IATI reporting, Zenodo, Vimeo, YouTube, Google Search Console,
 AdSense, S3 media bucket, OpenAI, ENFORCE_HOST_SPLIT, BOOKING_CALENDAR_DURATION_MINUTES.
 
 In production, **never commit `.env.local`** — push secrets through your
-deploy environment (AWS Amplify env vars, AWS Secrets Manager, etc.).
+deploy environment (Railway service variables, secret managers, etc.).
+See [docs/railway-deployment.md](docs/railway-deployment.md) for the
+production deployment runbook.
 
 ### 3) Bootstrap schema
 ```bash
@@ -81,10 +83,10 @@ This runs lint, tests, and production build.
 - If `DATABASE_URL` is set, it runs the full test suite.
 - If `DATABASE_URL` is missing, it runs DB-optional tests only (artifact-safe mode).
 
-For AWS build pipelines (Amplify/App Runner), use:
-```bash
-npm run build:aws
-```
+For Railway / container builds the `Dockerfile` drives `next build`
+directly — no extra script needed. See
+[docs/railway-deployment.md](docs/railway-deployment.md) for the
+production deployment runbook.
 
 For strict production readiness (env/security gate + full CI checks), use:
 ```bash

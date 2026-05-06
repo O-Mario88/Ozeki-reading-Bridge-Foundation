@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PartnerDataRoomPage() {
     // Fail gracefully if DB is unreachable at build time (CI without DB, first
-    // Amplify deploy before RDS is provisioned).
+    // deploy before the database is provisioned).
     let reports: Awaited<ReturnType<typeof listPublicImpactReportsAsync>> = [];
     let metrics = new Map<string, number>();
     try {

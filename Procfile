@@ -1,1 +1,1 @@
-web: npm run start:standalone
+web: node server.js

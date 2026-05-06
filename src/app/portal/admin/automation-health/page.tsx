@@ -127,7 +127,7 @@ export default async function AutomationHealthPage() {
 
         <section className="auto-section auto-cron-panel">
           <h2>Cron schedule</h2>
-          <p className="text-gray-500">Configure an external scheduler (Vercel, Amplify, cron-as-a-service) to invoke:</p>
+          <p className="text-gray-500">Configure an external scheduler (Railway cron, Vercel cron, cron-as-a-service) to invoke:</p>
           <ul>
             <li><code>GET /api/cron/dispatch</code> — <strong>every hour</strong> (fan-out to all scheduled jobs)</li>
             <li>Individual jobs can also be triggered directly:</li>

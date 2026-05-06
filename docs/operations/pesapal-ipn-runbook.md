@@ -2,7 +2,7 @@
 
 This is the live operator guide for getting Pesapal payments working in
 production. Follow it once during initial deployment and again any time
-the IPN URL changes (custom domain switch, Amplify environment swap,
+the IPN URL changes (custom domain switch, Railway environment swap,
 sandbox → live promotion, etc.).
 
 The platform reads four Pesapal env vars at runtime:
@@ -30,9 +30,9 @@ Pesapal and set this environment variable."` ([src/lib/server/payments/pesapal.t
    (e.g. `https://www.ozekiread.org`). The IPN URL is always
    `<origin>/api/payments/pesapal/ipn`.
 
-## 2. Set the env vars in Amplify
+## 2. Set the env vars in Railway
 
-In the AWS Amplify Console → **Environment variables**:
+In the Railway service→ **Variables**:
 
 ```text
 PESAPAL_ENVIRONMENT       = sandbox        # or "live" for production
@@ -94,7 +94,7 @@ Copy the `ipn_id` value — that's your `PESAPAL_IPN_ID`.
 
 ## 4. Save `PESAPAL_IPN_ID` and redeploy
 
-Back in Amplify Console → Environment variables → set
+Back in Railway dashboard → Environment variables → set
 `PESAPAL_IPN_ID = <ipn_id from step 3>` → save → redeploy.
 
 After the redeploy, donation initiations stop throwing the "IPN not
@@ -153,10 +153,10 @@ tuples) so replays don't double-credit.
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| "PESAPAL_IPN_ID is not configured" on every donation | Env var unset in Amplify | Step 4 |
+| "PESAPAL_IPN_ID is not configured" on every donation | Env var unset in Railway | Step 4 |
 | "Pesapal Authentication Failed" | Wrong key/secret OR pointing at sandbox URL with live keys | Step 2 + verify base URL matches `PESAPAL_ENVIRONMENT` |
 | IPN POSTs from Pesapal return 400 | Trailing slash mismatch on registered URL | Re-register with the exact URL `/api/payments/pesapal/ipn` (no trailing slash) |
-| Donation completes on Pesapal but stays "Pending" in portal | IPN didn't reach you, OR `verifyPesapalTransactionStatus` returned non-Completed | Replay (step 6) and check Amplify request logs |
+| Donation completes on Pesapal but stays "Pending" in portal | IPN didn't reach you, OR `verifyPesapalTransactionStatus` returned non-Completed | Replay (step 6) and check Railway logs |
 | Receipt number duplicated error | Race on retry — safe to ignore, the second IPN sees the existing row | None |
 
 ---

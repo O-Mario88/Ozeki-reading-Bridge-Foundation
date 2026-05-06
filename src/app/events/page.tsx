@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 export default async function EventsPage() {
   // Fail gracefully if DB is unreachable during build — important for CI and
-  // Amplify's first build when the RDS instance may not yet be provisioned.
+  // first deploys when the database may not yet be provisioned.
   let allEvents: Awaited<ReturnType<typeof listTrainingEventsPostgres>> = [];
   try {
     allEvents = await listTrainingEventsPostgres("Published");

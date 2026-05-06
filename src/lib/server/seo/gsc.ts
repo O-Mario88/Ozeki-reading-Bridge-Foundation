@@ -7,7 +7,7 @@ import { google, type searchconsole_v1 } from "googleapis";
  * Auth: service account with the "Owner" role on the target Search Console
  * property. Credentials come from one of these env vars (first wins):
  *   1. GSC_SERVICE_ACCOUNT_JSON       — inline JSON string
- *   2. GSC_SERVICE_ACCOUNT_JSON_B64   — base64-encoded JSON (recommended for Amplify)
+ *   2. GSC_SERVICE_ACCOUNT_JSON_B64   — base64-encoded JSON (recommended for Railway service variables)
  *   3. GSC_SERVICE_ACCOUNT_FILE       — absolute path to the JSON key on disk
  *
  * The target property is GSC_SITE_URL, e.g. "https://www.ozekiread.org/".

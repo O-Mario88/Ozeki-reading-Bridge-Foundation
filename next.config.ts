@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // amplify.yml + scripts/start-standalone.mjs serve from .next/standalone/server.js;
-  // that directory is only produced when output: "standalone" is set.
+  // Railway runs `node server.js` from the standalone build output, which
+  // is only produced when output: "standalone" is set.
   output: "standalone",
   serverExternalPackages: ["exceljs", "xlsx", "pg", "puppeteer", "puppeteer-core", "pdf-lib"],
   eslint: { ignoreDuringBuilds: true },
@@ -14,29 +14,6 @@ const nextConfig: NextConfig = {
     qualities: [25, 50, 75, 90],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-  },
-  // Amplify SSR does NOT auto-pass env vars to Lambda. This block inlines
-  // them at build time — the only mechanism that works on Amplify.
-  // The client.ts getDatabaseUrlRaw() auto-corrects missing database names.
-  env: {
-    DATABASE_URL: process.env.DATABASE_URL,
-    DATABASE_SSL: process.env.DATABASE_SSL,
-    GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID,
-    GOOGLE_OAUTH_CLIENT_SECRET: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
-    GOOGLE_OAUTH_REDIRECT_URI: process.env.GOOGLE_OAUTH_REDIRECT_URI,
-    // SMTP / Email
-    SMTP_HOST: process.env.SMTP_HOST,
-    SMTP_PORT: process.env.SMTP_PORT,
-    SMTP_SECURE: process.env.SMTP_SECURE,
-    SMTP_USER: process.env.SMTP_USER,
-    SMTP_PASS: process.env.SMTP_PASS,
-    SMTP_FROM: process.env.SMTP_FROM,
-    FINANCE_EMAIL_FROM: process.env.FINANCE_EMAIL_FROM,
-    // Automation-layer env vars (added 2026-04)
-    CRON_SECRET_TOKEN: process.env.CRON_SECRET_TOKEN,
-    DIGEST_RECIPIENTS: process.env.DIGEST_RECIPIENTS,
-    PROGRAMMES_EMAIL_FROM: process.env.PROGRAMMES_EMAIL_FROM,
-    FINANCE_EMAIL_ALWAYS_CC: process.env.FINANCE_EMAIL_ALWAYS_CC,
   },
   outputFileTracingExcludes: {
     "*": [

@@ -1,4 +1,4 @@
-# Secret Rotation & Amplify Env-Var Migration Checklist
+# Secret Rotation & Railway Env-Var Migration Checklist
 
 Use this runbook (a) once before client handover to rotate every
 credential that has touched the dev machine, and (b) on a quarterly
@@ -64,7 +64,7 @@ locked out of two systems:
    `PORTAL_SESSION_SECRET`): generate fresh `openssl rand -hex 32` (or
    `-hex 24` for shorter ones). `PORTAL_SESSION_SECRET` will sign
    everyone out — schedule that for a low-traffic window.
-8. **Update Amplify** (next section).
+8. **Update Railway service variables** (next section).
 9. **Delete `.env.local.pre-rotate.bak`** from the dev laptop. Do **not**
    commit it — `.gitignore` already excludes it, but it's still a
    physical artifact on disk.
@@ -73,29 +73,29 @@ locked out of two systems:
     returns commits, those secrets are in git history and must be
     treated as still-exposed even after rotation.
 
-## 3. Move secrets into Amplify (or AWS Secrets Manager)
+## 3. Move secrets into Railway (or a managed secrets store)
 
 Production should never read from `.env.local`. The codebase reads
-`process.env.*` with no special prefix — Amplify supplies these via
-its **App settings → Environment variables** page.
+`process.env.*` with no special prefix — Railway supplies these via
+its **service → Variables tab** page.
 
 For each variable in [.env.example](../../.env.example):
 
 1. Decide if it's a build-time or runtime var. Most are runtime.
-2. In Amplify Console → your app → **Environment variables** →
-   **Manage variables**:
+2. In Railway dashboard → your app → **Environment variables** →
+   **New Variable**:
    - **Variable**: the name (`PESAPAL_IPN_ID`)
    - **Value**: the secret
-   - **Branch**: select your production branch (usually `main`)
+   - **Environment**: select your production environment (Railway defaults to a single "production" env)
 3. Save.
 4. Trigger a redeploy so the running pods pick the new value up.
-   Amplify does not hot-reload env vars.
+   Railway does not hot-reload service variables.
 
 For very-high-value secrets (`DATABASE_URL`, `PORTAL_SESSION_SECRET`,
-`PESAPAL_CONSUMER_SECRET`), prefer **AWS Secrets Manager** + Amplify's
-*Secrets* feature over plain env vars. Amplify will inject the secret
-at deploy time without it ever appearing in the CloudFormation
-template or in build logs.
+`PESAPAL_CONSUMER_SECRET`), prefer a dedicated secrets manager (Doppler, 1Password Secrets Automation, AWS Secrets Manager) referenced from Railway
+*Secrets* feature over plain env vars. Railway will inject the secret
+at deploy time without it ever appearing in the deploy manifest
+or build logs.
 
 ## 4. Quarterly rotation cadence (calendar this)
 
@@ -126,7 +126,7 @@ After every rotation, run a 30-second smoke test:
 5. Sign out and back in via Google (verifies Google OAuth).
 
 If any of those fail after rotation, the most likely culprit is that
-Amplify wasn't redeployed; trigger a new deploy and try again.
+Railway hasn't redeployed; trigger a new deploy and try again.
 
 ## 6. The "I exposed a secret" emergency drill
 

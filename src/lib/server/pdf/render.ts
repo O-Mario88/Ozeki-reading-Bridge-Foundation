@@ -2,7 +2,7 @@
  * PDF rendering engine using pdf-lib (pure JavaScript — no Chromium required).
  *
  * Replaces the previous puppeteer-based implementation so that PDF generation
- * works on AWS Amplify Lambda where no browser binary is available.
+ * works in container environments without a browser binary (Railway, Cloud Run, etc.).
  *
  * The function parses the HTML content produced by the finance/program templates
  * and renders it using pdf-lib drawing primitives with branded headers/footers.

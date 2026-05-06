@@ -37,7 +37,7 @@ function cycleColor(cycle: string): string {
 
 export default async function NationalBenchmarksPage() {
   // Graceful degradation if the DB is unreachable (CI build without DB, or
-  // Amplify cold start before RDS is online).
+  // a cold deploy before the database is online).
   let report: Awaited<ReturnType<typeof getNationalBenchmarksPostgres>> = {
     asOf: new Date().toISOString(),
     totalLearnersAssessed: 0,

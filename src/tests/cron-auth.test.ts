@@ -22,7 +22,7 @@ test("cron-auth: in production, missing CRON_SECRET_TOKEN returns 503", async ()
   // production branch we're testing only relies on the NODE_ENV value
   // being equal to "production" — which we can read but not write
   // safely. Skip if we can't toggle it; the prod path is also exercised
-  // implicitly by the Amplify deploy.
+  // implicitly by the production deploy.
   const isProd = process.env.NODE_ENV === "production";
   if (!isProd) return; // dev/test runs: skip — covered by the next case
 

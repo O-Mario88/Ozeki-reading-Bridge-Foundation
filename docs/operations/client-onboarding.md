@@ -30,7 +30,7 @@ only surfaces after 10 minutes of authenticated use — see
    operator should issue this from `/portal/superadmin` → New User →
    Role: **Super Admin**.
 2. **Sign in once and verify MFA** is required (`BYPASS_MFA` must be
-   `false` in production env vars — check Amplify console).
+   `false` in production env vars — check Railway dashboard).
 3. **Open `/portal/finance/transparency`** — verify the live numbers
    match what you expect from Pesapal's merchant dashboard.
 4. **Open `/portal/data-quality`** — anything red here is the data
@@ -58,7 +58,7 @@ sign-in.
 
 ## Critical day-one operator tasks
 
-1. **Confirm Pesapal env vars are set in Amplify** —
+1. **Confirm Pesapal env vars are set in Railway** —
    `PESAPAL_ENVIRONMENT`, `_CONSUMER_KEY`, `_CONSUMER_SECRET`,
    `_IPN_ID`. If `_IPN_ID` is unset, donations error out with a clear
    message. Follow [pesapal-ipn-runbook.md](pesapal-ipn-runbook.md) to
@@ -136,7 +136,7 @@ When you're ready to hand the platform to a non-technical client:
 3. The "Daily / weekly rhythms" table.
 4. A printed copy of the [Pesapal IPN runbook](pesapal-ipn-runbook.md)
    for whoever owns the merchant account.
-5. The credentials for: AWS Amplify Console, AWS RDS, Pesapal merchant
+5. The credentials for: Railway service, AWS RDS, Pesapal merchant
    console, the Google OAuth project, the SMTP provider, the domain
    registrar. **All of these should live in the operator's password
    manager, not in the repo.**

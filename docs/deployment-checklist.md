@@ -35,8 +35,8 @@
   - leave unset/false to allow app boot in degraded mode while `/api/health` reports DB failure.
 
 ## CI/Pre-Deploy
-- AWS build command:
-  - `npm run build:aws`
+- Production build (Railway runs this automatically via the Dockerfile):
+  - `npm run build`
 - General CI verify (artifact-safe when DB is unavailable):
   - `npm run ci:verify`
 - Full strict pre-deploy verification (recommended before release):
