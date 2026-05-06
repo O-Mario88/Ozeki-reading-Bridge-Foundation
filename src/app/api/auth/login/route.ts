@@ -59,9 +59,29 @@ export async function POST(request: Request) {
     await recordLoginAttemptPostgres(loginIdentifier, ipAddress, true);
 
     // 4. MFA Trigger for Privileged Users
+    //
+    // MFA is gated by SMTP availability — without an outbound mail channel
+    // we cannot deliver the OTP, and returning a hard 500 would lock every
+    // privileged user out of a fresh deploy where SMTP hasn't been wired up
+    // yet. Three bypass paths, in priority order:
+    //   1. NODE_ENV=development + BYPASS_MFA=true — explicit dev bypass
+    //   2. BYPASS_MFA=true in any environment — explicit operator override
+    //      (documented in secret-rotation.md as a temporary first-login lever)
+    //   3. SMTP_HOST not configured — graceful auto-degrade. Logs a warning
+    //      so the operator can see MFA is silently disabled until SMTP is
+    //      provisioned, but lets the login complete instead of failing.
     const isPrivileged = user.isSuperAdmin || user.isAdmin || user.isME || user.isSupervisor;
-    const bypassMfa = process.env.NODE_ENV === "development" && process.env.BYPASS_MFA === "true";
-    
+    const explicitBypass = process.env.BYPASS_MFA === "true";
+    const smtpConfigured = Boolean(process.env.SMTP_HOST?.trim());
+    const bypassMfa = explicitBypass || !smtpConfigured;
+    if (bypassMfa && isPrivileged) {
+      logger.warn("[login] MFA bypassed", {
+        reason: explicitBypass ? "BYPASS_MFA=true" : "SMTP_HOST not configured",
+        userId: user.id,
+        env: process.env.NODE_ENV,
+      });
+    }
+
     if (isPrivileged && !bypassMfa) {
       const mfaCode = await generateMfaOtpPostgres(user.id);
       logger.info("[login] MFA challenge dispatched", { userId: user.id, smtp: process.env.SMTP_HOST });
