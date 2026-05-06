@@ -2,6 +2,7 @@ import { PageHero } from "@/components/public/PageHero";
 import { listServiceCatalogPostgres } from "@/lib/server/postgres/repositories/service-booking";
 import { BookingWizard } from "@/components/public/BookingWizard";
 
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Request School Services | OzekiRead",

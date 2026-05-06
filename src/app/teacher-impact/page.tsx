@@ -6,7 +6,7 @@ import {
   getPublicCoachingCompletionRate,
 } from "@/lib/server/postgres/repositories/public-metrics";
 
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Teacher Impact — Ozeki Reading Bridge Foundation",

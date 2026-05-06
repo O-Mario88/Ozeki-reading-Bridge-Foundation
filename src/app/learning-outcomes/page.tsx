@@ -8,7 +8,7 @@ import {
   type DistrictLearningOutcomeRow,
 } from "@/lib/server/postgres/repositories/public-metrics";
 
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Learning Outcomes — Ozeki Reading Bridge Foundation",

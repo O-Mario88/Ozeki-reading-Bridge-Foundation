@@ -8,7 +8,7 @@ export const metadata = {
     "Learn how Ozeki assesses reading skills, defines indicators, protects data, and reports credible results.",
 };
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export default async function ImpactMethodologyPage() {
   const latestReport = (await listPublicImpactReportsAsync({ limit: 1 }))[0] ?? null;

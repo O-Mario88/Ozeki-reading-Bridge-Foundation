@@ -14,7 +14,7 @@ export const metadata = {
         "District league tables, priority flags, and evidence-based policy insights for government stakeholders across all 135+ districts of Uganda.",
 };
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 function priorityBadge(flag: "urgent" | "watch" | "on-track") {
     const styles: Record<string, { bg: string; color: string; label: string }> = {

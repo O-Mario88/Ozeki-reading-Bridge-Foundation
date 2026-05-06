@@ -7,7 +7,7 @@ export const metadata = {
         "Methodology documentation, data codebook, program evidence, and downloadable reports for funding and implementation partners.",
 };
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export default async function PartnerDataRoomPage() {
     // Fail gracefully if DB is unreachable at build time (CI without DB, first

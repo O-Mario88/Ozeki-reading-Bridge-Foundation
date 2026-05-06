@@ -4,7 +4,7 @@ import { getImpactReportByCodeAsync, incrementImpactReportViewCountAsync } from 
 import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
 import type { ImpactReportFactPack, ImpactReportLearningOutcomeMetric, ImpactReportNarrative } from "@/lib/types";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 type ChartDatum = {
   label: string;

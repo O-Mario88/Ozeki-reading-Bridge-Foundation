@@ -6,7 +6,7 @@ import {
   type RegionOverviewRow,
 } from "@/lib/server/postgres/repositories/public-metrics";
 
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Regions — Ozeki Reading Bridge Foundation",

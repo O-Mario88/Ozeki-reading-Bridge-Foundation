@@ -10,7 +10,7 @@ import {
     buildLearningGainsFromAggregate,
 } from "@/lib/public-impact-views";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 type Params = Promise<{ id: string }>;
 

@@ -12,7 +12,7 @@ export const metadata = {
     "Professional overview of all Ozeki Reading Bridge Foundation programs with direct links to each detailed service page.",
 };
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 const headlineMetricLabels = [
   "Schools trained",

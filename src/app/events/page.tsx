@@ -5,9 +5,7 @@ import { Video, MapPin, Calendar, Clock, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { CTAStrip } from "@/components/public/CTAStrip";
 
-// Public events list changes slowly; 10-minute revalidation avoids hammering
-// the DB on every page view while still reflecting new schedules.
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Online Training Sessions",

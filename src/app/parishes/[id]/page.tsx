@@ -2,7 +2,7 @@ import { getImpactDrilldownData, calculateFidelityScore, getLearningGainsData } 
 import Link from "next/link";
 import type { Metadata } from "next";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 type Params = Promise<{ id: string }>;
 
