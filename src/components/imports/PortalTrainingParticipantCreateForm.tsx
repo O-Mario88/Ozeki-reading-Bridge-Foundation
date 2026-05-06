@@ -89,7 +89,7 @@ export function PortalTrainingParticipantCreateForm({
     setNotes("");
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>, mode: "save" | "save_another") {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>, _mode: "save" | "save_another") {
     event.preventDefault();
     setSaving(true);
     setFeedback({ kind: "idle", message: "" });

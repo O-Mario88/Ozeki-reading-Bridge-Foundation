@@ -235,7 +235,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ type:
     const pdfBuffer = await generateFinancialPdf(reportData);
     const filename = `${reportType}_Report_${new Date().getTime()}.pdf`;
 
-    return new NextResponse(pdfBuffer as any, {
+    return new NextResponse(pdfBuffer as unknown as BodyInit, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

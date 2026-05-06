@@ -12,7 +12,6 @@ import {
 import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { auditLog } from "@/lib/server/audit/log";
 import { firstPasswordPolicyError } from "@/lib/server/auth/password-policy";
-import { revokeAllPortalSessionsForUserPostgres } from "@/lib/server/postgres/repositories/auth";
 
 export const runtime = "nodejs";
 

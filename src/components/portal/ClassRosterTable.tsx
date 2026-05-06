@@ -25,7 +25,7 @@ interface Props {
 
 type SortKey = "name" | "score" | "gender" | "stage" | "flag";
 
-export function ClassRosterTable({ learners, schoolId }: Props) {
+export function ClassRosterTable({ learners, schoolId: _schoolId }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [filter, setFilter] = useState("");

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { getNationalBenchmarksPostgres } from "@/lib/server/postgres/repositories/national-intelligence";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { CTAStrip } from "@/components/public/CTAStrip";
-import { BookOpen, Database, ChevronRight, BarChart3, Scale, Award } from "lucide-react";
+import { BookOpen, Database, ChevronRight, BarChart3, Scale } from "lucide-react";
 
 export const revalidate = 3600;
 

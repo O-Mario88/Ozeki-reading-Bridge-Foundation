@@ -11,15 +11,11 @@ import {
   ugandaRegions,
 } from "@/lib/uganda-locations";
 import { SchoolDirectoryRecord, SCHOOL_TYPE_OPTIONS, SCHOOL_OWNERSHIP_OPTIONS } from "@/lib/types";
-import dynamic from "next/dynamic";
 
-const SchoolRosterPicker = dynamic(
-  () => import("./SchoolRosterPicker").then((mod) => mod.SchoolRosterPicker),
-  { ssr: false, loading: () => <div>Loading roster...</div> },
-);
+// SchoolRosterPicker / EnrollmentFormModal / LiteracyImpactFormModal were
+// removed from the live render path — kept-as-imports left lint warnings.
+// Re-add them if those flows come back.
 import { FormModal } from "@/components/forms";
-import { EnrollmentFormModal } from "./EnrollmentFormModal";
-import { LiteracyImpactFormModal } from "./LiteracyImpactFormModal";
 import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 interface PortalSchoolsManagerProps {
@@ -67,22 +63,20 @@ export function PortalSchoolsManager({
   const [districtFilter, setDistrictFilter] = useState("");
   const [queryFilter, setQueryFilter] = useState("");
 
-  const [isDeletingSchool, setIsDeletingSchool] = useState(false);
+  const [_isDeletingSchool, setIsDeletingSchool] = useState(false);
 
   const [savingSchool, setSavingSchool] = useState(false);
-  const [savingProfile, setSavingProfile] = useState(false);
+  const [_savingProfile, setSavingProfile] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(createOnly);
-  const [isEnrollmentFormOpen, setIsEnrollmentFormOpen] = useState(false);
-  const [isLiteracyImpactFormOpen, setIsLiteracyImpactFormOpen] = useState(false);
   const [createContactName, setCreateContactName] = useState("");
   const [createContactPhone, setCreateContactPhone] = useState("");
   const [createContactGender, setCreateContactGender] = useState<"Male" | "Female" | "Other" | "">("");
   const [createContactEmail, setCreateContactEmail] = useState("");
   const [createContactWhatsapp, setCreateContactWhatsapp] = useState("");
-  const [editContactName, setEditContactName] = useState("");
-  const [editContactPhone, setEditContactPhone] = useState("");
+  const [_editContactName, setEditContactName] = useState("");
+  const [_editContactPhone, setEditContactPhone] = useState("");
 
   const [createFeedback, setCreateFeedback] = useState<Feedback>({
     kind: "idle",
@@ -92,13 +86,12 @@ export function PortalSchoolsManager({
     kind: "idle",
     message: "",
   });
-  const [profileFeedback, setProfileFeedback] = useState<Feedback>({
+  const [_profileFeedback, setProfileFeedback] = useState<Feedback>({
     kind: "idle",
     message: "",
   });
 
   const createFormRef = useRef<HTMLFormElement>(null);
-  const editFormRef = useRef<HTMLFormElement>(null);
 
   const createDistrictOptions = createSubRegion
     ? getDistrictsByRegion(createSubRegion)
@@ -137,33 +130,14 @@ export function PortalSchoolsManager({
       return Boolean(nameMatch || phoneMatch);
     });
   }, [createContactName, createContactPhone, knownSchools]);
-  const editDuplicateContactMatches = useMemo(() => {
-    if (!selectedSchool) {
-      return [];
-    }
-    const normalizedName = normalizeContactValue(editContactName);
-    const normalizedPhone = normalizeContactValue(editContactPhone);
-    if (!normalizedName && !normalizedPhone) {
-      return [];
-    }
+  // editDuplicateContactMatches / editDistrictOptions removed — they were
+  // computed for an inline edit form that no longer renders here. Edit
+  // happens inside SchoolEditModalClient now.
 
-    return knownSchools.filter((school) => {
-      if (school.id === selectedSchool.id) {
-        return false;
-      }
-      const nameMatch =
-        normalizedName && normalizeContactValue(school.contactName) === normalizedName;
-      const phoneMatch =
-        normalizedPhone && normalizeContactValue(school.contactPhone) === normalizedPhone;
-      return Boolean(nameMatch || phoneMatch);
-    });
-  }, [editContactName, editContactPhone, knownSchools, selectedSchool]);
-
-  const [editRegion, setEditRegion] = useState(
+  const [_editRegion, setEditRegion] = useState(
     inferRegionFromDistrict(selectedSchool?.district ?? "") ?? ugandaRegions[0]?.region ?? "",
   );
-  const [editDistrict, setEditDistrict] = useState(selectedSchool?.district ?? "");
-  const editDistrictOptions = editRegion ? getDistrictsByRegion(editRegion) : allUgandaDistricts;
+  const [_editDistrict, setEditDistrict] = useState(selectedSchool?.district ?? "");
 
   useEffect(() => {
     if (!schools.some((school) => school.id === selectedSchoolId)) {
@@ -363,7 +337,7 @@ export function PortalSchoolsManager({
     }
   }
 
-  async function handleUpdateSchoolProfile(event: FormEvent<HTMLFormElement>) {
+  async function _handleUpdateSchoolProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedSchool) {
       return;
@@ -493,7 +467,7 @@ export function PortalSchoolsManager({
     }
   }
 
-  async function handleDeleteSchool(id: number, e: React.MouseEvent) {
+  async function _handleDeleteSchool(id: number, e: React.MouseEvent) {
     e.preventDefault();
     if (!window.confirm("Are you SURE you want to permanently delete this school and all of its associated records? This cannot be undone.")) return;
     

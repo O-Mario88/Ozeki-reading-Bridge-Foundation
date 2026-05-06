@@ -636,7 +636,7 @@ function parseVisitNextActions(value: unknown): VisitNextActionRow[] {
   }
 
   const parsedRows = rows
-    .map((row, index) => ({
+    .map((row) => ({
       id: nextRowId(),
       action: String(row.action ?? "").trim(),
       ownerContactId: String(row.ownerContactId ?? row.owner_contact_id ?? "").trim(),

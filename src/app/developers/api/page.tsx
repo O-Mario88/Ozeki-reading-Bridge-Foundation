@@ -4,7 +4,7 @@ import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { CTAStrip } from "@/components/public/CTAStrip";
 import {
   Key, Database, FileCode, Clock, Shield, Globe, BookOpen,
-  ChevronRight, Download, Zap, Users, Scale,
+  Download, Zap, Users, Scale,
 } from "lucide-react";
 
 export const revalidate = 3600;

@@ -21,7 +21,7 @@ function normalizeLevel(raw: string): PublicImpactAggregate["scope"]["level"] | 
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { level, id } = await params;
+  const { level: _level, id } = await params;
   return {
     title: `Ozeki Read — ${decodeURIComponent(id)} scorecard`,
     robots: { index: false, follow: false },

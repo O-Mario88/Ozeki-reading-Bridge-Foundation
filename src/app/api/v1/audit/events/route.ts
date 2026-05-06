@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { withApiV1 } from "@/lib/server/api-v1";
 import { queryPostgres } from "@/lib/server/postgres/client";
 

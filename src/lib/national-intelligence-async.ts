@@ -4,6 +4,7 @@ import {
   BenchmarkRuleInput,
   BenchmarkProfileRecord,
   InterventionPlanRecord,
+  InterventionActionRecord,
 } from "./types";
 import { IntelligenceService as service } from "@/services/intelligenceService";
 
@@ -179,7 +180,10 @@ export async function getInterventionPlanByIdAsync(planId: number) {
 export async function upsertInterventionPlanAsync(args: {
   user: { id: number; fullName: string };
   plan: Partial<InterventionPlanRecord>;
-  actions: any[];
+  actions: Array<Partial<InterventionActionRecord> & {
+    actionType: InterventionActionRecord["actionType"];
+    ownerUserId: number;
+  }>;
 }) {
   return service.upsertInterventionPlan({
     user: args.user,

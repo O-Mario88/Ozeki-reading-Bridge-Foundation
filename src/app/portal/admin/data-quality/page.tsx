@@ -3,7 +3,7 @@ import { requirePortalUser } from "@/lib/auth";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { getDataQualityByDistrictPostgres } from "@/lib/server/postgres/repositories/national-intelligence";
-import { ChevronLeft, Award, Activity, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, Award, Activity } from "lucide-react";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";

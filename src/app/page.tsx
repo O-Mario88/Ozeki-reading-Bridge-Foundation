@@ -122,7 +122,7 @@ export default function HomePage() {
 }
 
 /* ── Top utility strip ─────────────────────────────────────────────── */
-function TopUtilityStrip() {
+function _TopUtilityStrip() {
   return (
     <div style={{ background: TEAL_DARK }} className="text-white text-[12px]">
       <div className="max-w-[1280px] mx-auto px-6 h-9 flex items-center justify-between">
@@ -140,7 +140,7 @@ function TopUtilityStrip() {
 }
 
 /* ── Top nav bar ───────────────────────────────────────────────────── */
-function TopNavBar() {
+function _TopNavBar() {
   return (
     <header className="bg-white border-b border-gray-100">
       <div className="max-w-[1280px] mx-auto px-6 h-[72px] flex items-center justify-between gap-6">
@@ -672,7 +672,7 @@ function DonationCtaStrip() {
 }
 
 /* ── Footer ────────────────────────────────────────────────────────── */
-function SiteFooterReplica() {
+function _SiteFooterReplica() {
   return (
     <footer className="bg-white">
       <div className="max-w-[1280px] mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.3fr_repeat(3,_1fr)_1.2fr] gap-8">

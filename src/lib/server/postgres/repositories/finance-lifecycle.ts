@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
+import { withPostgresClient } from "@/lib/server/postgres/client";
 import type { PoolClient } from "pg";
 
 /**
@@ -230,8 +230,10 @@ export async function recordInvoicePaymentPostgres(input: RecordPaymentInput): P
 /* ────────────────────────────────────────────────────────────────────────── */
 
 async function hydrateAfterIdempotent(client: PoolClient, paymentId: number, invoiceId: number) {
-  const [pRes, rRes, iRes] = await Promise.all([
-    client.query(`SELECT amount FROM finance_payments WHERE id = $1`, [paymentId]),
+  // pRes (finance_payments amount) was previously fetched but never read
+  // — caller only needs the receipt + invoice rows. Dropping the dead
+  // query also saves a roundtrip.
+  const [rRes, iRes] = await Promise.all([
     client.query(
       `SELECT id, receipt_number FROM finance_receipts
        WHERE payment_id = $1 AND archived_due_to_finance_reset IS FALSE LIMIT 1`,

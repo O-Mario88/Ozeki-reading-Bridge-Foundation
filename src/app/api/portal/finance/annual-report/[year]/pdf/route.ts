@@ -10,7 +10,7 @@ type RouteContext = { params: Promise<{ year: string }> };
 function fmtUgx(n: number): string {
   return `UGX ${n.toLocaleString()}`;
 }
-function fmtUsd(n: number): string {
+function _fmtUsd(n: number): string {
   return `USD ${n.toLocaleString()}`;
 }
 
