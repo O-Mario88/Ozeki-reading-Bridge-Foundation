@@ -60,22 +60,32 @@ export async function POST(request: Request) {
 
     // 4. MFA Trigger for Privileged Users
     //
-    // MFA is gated by SMTP availability — without an outbound mail channel
-    // we cannot deliver the OTP, and returning a hard 500 would lock every
-    // privileged user out of a fresh deploy where SMTP hasn't been wired up
-    // yet. Three bypass paths, in priority order:
-    //   1. NODE_ENV=development + BYPASS_MFA=true — explicit dev bypass
-    //   2. BYPASS_MFA=true in any environment — explicit operator override
-    //      (documented in secret-rotation.md as a temporary first-login lever)
-    //   3. SMTP_HOST not configured — graceful auto-degrade. Logs a warning
-    //      so the operator can see MFA is silently disabled until SMTP is
-    //      provisioned, but lets the login complete instead of failing.
+    // Production (NODE_ENV=production) ALWAYS enforces MFA for privileged
+    // accounts — BYPASS_MFA is ignored, and missing SMTP returns 503 instead
+    // of degrading to no-MFA. This is fail-closed by design: an unconfigured
+    // SMTP_HOST in prod means the operator has not finished deploy setup and
+    // privileged accounts must not log in until MFA can be delivered.
+    //
+    // Outside production, two bypass paths remain so a fresh dev/staging
+    // deploy doesn't lock out the seed admin before SMTP is wired:
+    //   1. BYPASS_MFA=true — explicit operator/developer override
+    //   2. SMTP_HOST not configured — graceful auto-degrade with a warning
     const isPrivileged = user.isSuperAdmin || user.isAdmin || user.isME || user.isSupervisor;
+    const isProduction = process.env.NODE_ENV === "production";
     const explicitBypass = process.env.BYPASS_MFA === "true";
     const smtpConfigured = Boolean(process.env.SMTP_HOST?.trim());
-    const bypassMfa = explicitBypass || !smtpConfigured;
+
+    if (isProduction && isPrivileged && !smtpConfigured) {
+      logger.error("[login] SMTP not configured in production — refusing privileged login", { userId: user.id });
+      return NextResponse.json({ error: "Multi-factor authentication is unavailable. Contact your administrator." }, { status: 503 });
+    }
+    if (isProduction && explicitBypass) {
+      logger.warn("[login] BYPASS_MFA ignored in production", { userId: user.id });
+    }
+
+    const bypassMfa = !isProduction && (explicitBypass || !smtpConfigured);
     if (bypassMfa && isPrivileged) {
-      logger.warn("[login] MFA bypassed", {
+      logger.warn("[login] MFA bypassed (non-production)", {
         reason: explicitBypass ? "BYPASS_MFA=true" : "SMTP_HOST not configured",
         userId: user.id,
         env: process.env.NODE_ENV,

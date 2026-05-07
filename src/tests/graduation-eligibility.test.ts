@@ -31,7 +31,8 @@ async function toPortalActor(): Promise<PortalUser> {
 
 test("seeded super admin credentials authenticate successfully even after credential drift", async () => {
   const email = process.env.PORTAL_SUPERADMIN_EMAIL?.toLowerCase() ?? "edwin@ozekiread.org";
-  const password = process.env.PORTAL_SUPERADMIN_PASSWORD ?? "Ozeki@16079";
+  const password = process.env.PORTAL_SUPERADMIN_PASSWORD;
+  assert.ok(password, "PORTAL_SUPERADMIN_PASSWORD env var is required for this test (do not hardcode production credentials).");
 
   await queryPostgres(
     `
@@ -50,7 +51,8 @@ test("seeded super admin credentials authenticate successfully even after creden
 
 test("portal session token remains valid even if the sqlite session row is unavailable", async () => {
   const email = process.env.PORTAL_SUPERADMIN_EMAIL?.toLowerCase() ?? "edwin@ozekiread.org";
-  const password = process.env.PORTAL_SUPERADMIN_PASSWORD ?? "Ozeki@16079";
+  const password = process.env.PORTAL_SUPERADMIN_PASSWORD;
+  assert.ok(password, "PORTAL_SUPERADMIN_PASSWORD env var is required for this test (do not hardcode production credentials).");
   const actor = await authenticatePortalUser(email, password);
   assert.ok(actor, "Expected seeded super admin credentials to authenticate.");
 

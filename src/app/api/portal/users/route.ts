@@ -164,6 +164,14 @@ export async function PATCH(request: Request) {
 
   try {
     const payload = updateUserSchema.parse(await request.json());
+
+    // Guard: a super admin cannot demote themselves. The last super admin
+    // demoting their own account would lock the org out of user management
+    // (which is super-admin-only — see canManagePortalUsers).
+    if (payload.userId === user.id && payload.isSuperAdmin === false) {
+      return NextResponse.json({ error: "You cannot remove your own Super Admin status." }, { status: 400 });
+    }
+
     await updatePortalUserPermissions(payload.userId, payload, user);
     const isRoleOrPermChange =
       payload.role !== undefined ||
