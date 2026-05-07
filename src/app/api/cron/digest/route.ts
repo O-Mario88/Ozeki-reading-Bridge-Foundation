@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { buildDigestPayloadPostgres } from "@/lib/server/postgres/repositories/command-center";
 import { sendFinanceMail } from "@/lib/finance-email";
 import { requireCronToken } from "@/lib/server/http/cron-auth";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -150,7 +151,7 @@ export async function GET(request: Request) {
       digest: { ...digest, topActivity: digest.topActivity.length, topWorkQueue: digest.topWorkQueue.length },
     });
   } catch (error) {
-    console.error("[api/cron/digest]", error);
+    logger.error("[cron/digest] failed", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Digest failed" }, { status: 500 });
   }
 }

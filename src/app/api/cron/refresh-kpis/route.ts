@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { refreshAllKpiSnapshotsPostgres } from "@/lib/server/postgres/repositories/kpi-snapshots";
 import { requireCronToken } from "@/lib/server/http/cron-auth";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
     const ms = Date.now() - start;
     return NextResponse.json({ ok: true, ...result, durationMs: ms, at: new Date().toISOString() });
   } catch (error) {
-    console.error("[cron/refresh-kpis]", error);
+    logger.error("[cron/refresh-kpis] failed", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }

@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { requireAdminToken } from "@/lib/server/http/admin-auth";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   const authError = requireAdminToken(request);
   if (authError) return authError;
   try {
-    console.log("Beginning Hard Historical Migration...");
+    logger.info("[migrate/historical] starting hard historical migration");
 
     // 1. Ensure new columns exist on training_events (Just in case the other route wasn't run)
     await queryPostgres(`
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
     await queryPostgres('BEGIN');
 
     // MIGRATION A: From online_training_sessions -> training_events
-    console.log("Migrating online_training_sessions...");
+    logger.info("[migrate/historical] copying online_training_sessions → training_events");
     await queryPostgres(`
       INSERT INTO training_events (
         event_code, delivery_type, title, slug, description, target_audience,
@@ -42,7 +43,7 @@ export async function GET(request: Request) {
 
     // MIGRATION B: From recorded_lessons -> training_events
     // Note: recorded_lessons acts more like a static library, but since user requested explicit "those two tables", we merge them.
-    console.log("Migrating recorded_lessons...");
+    logger.info("[migrate/historical] copying recorded_lessons → training_events");
     await queryPostgres(`
       INSERT INTO training_events (
         event_code, delivery_type, title, slug, description, target_audience,
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
     `);
 
     // 3. Drop legacy tables
-    console.log("Dropping legacy tables...");
+    logger.info("[migrate/historical] dropping legacy tables");
     await queryPostgres('DROP TABLE IF EXISTS online_training_sessions CASCADE');
     await queryPostgres('DROP TABLE IF EXISTS recorded_lessons CASCADE');
 
@@ -71,7 +72,7 @@ export async function GET(request: Request) {
 
   } catch (e: unknown) {
     await queryPostgres('ROLLBACK');
-    console.error("Migration failed:", e);
+    logger.error("[migrate/historical] failed", { error: e instanceof Error ? e.message : String(e) });
     return NextResponse.json({ success: false, error: e instanceof Error ? e.message : "Unknown error" }, { status: 500 });
   }
 }

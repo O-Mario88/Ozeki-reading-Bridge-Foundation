@@ -3,6 +3,7 @@ import { queryPostgres } from "@/lib/server/postgres/client";
 import { listRecordingFilesFromDrive, makeDriveFilePublicWithLink } from "@/lib/google-workspace";
 import { uploadVideoToVimeoByPull } from "@/lib/vimeo";
 import { requireCronToken } from "@/lib/server/http/cron-auth";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
   if (authError) return authError;
 
   try {
-     console.log("[cron-sync] Starting Automated Google Drive -> Vimeo Synchronization cycle...");
+     logger.info("[cron/sync-recordings] starting Drive→Vimeo sync cycle");
 
      // 2. Fetch Scheduled Lessons
      const unsyncedLessonsRes = await queryPostgres(
@@ -44,7 +45,7 @@ export async function GET(request: Request) {
         });
 
         if (matchedDriveFile) {
-           console.log(`[cron-sync] Match identified! Lesson ID: ${lesson.id} -> Drive File Name: ${matchedDriveFile.name}`);
+           logger.info("[cron/sync-recordings] match found", { lessonId: lesson.id, driveFileName: matchedDriveFile.name });
            try {
               // 4a. Update Postgres to Lock the status
               await queryPostgres(
@@ -87,7 +88,7 @@ export async function GET(request: Request) {
               syncCount++;
               logs.push(`Successfully synced: ${lesson.title}`);
            } catch (error) {
-              console.error(`[cron-sync] Automation failed for lesson ${lesson.id}:`, error);
+              logger.error("[cron/sync-recordings] per-lesson sync failed", { lessonId: lesson.id, error: error instanceof Error ? error.message : String(error) });
               logs.push(`Failed to sync: ${lesson.title}`);
               // Reset status gracefully back to scheduled or failed
               await queryPostgres(
@@ -105,7 +106,7 @@ export async function GET(request: Request) {
      });
 
   } catch (error) {
-     console.error("[cron-sync] Critical failure in background syncer:", error);
+     logger.error("[cron/sync-recordings] critical failure in background syncer", { error: error instanceof Error ? error.message : String(error) });
      return NextResponse.json({ error: "Cron Job Failed internally." }, { status: 500 });
   }
 }

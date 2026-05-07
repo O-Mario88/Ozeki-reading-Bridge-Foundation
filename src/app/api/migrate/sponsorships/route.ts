@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { requireAdminToken } from "@/lib/server/http/admin-auth";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   const authError = requireAdminToken(request);
@@ -8,7 +9,7 @@ export async function GET(request: Request) {
 
   try {
     await queryPostgres('BEGIN');
-    console.log(">> Initiating Phase 7: Sponsorship & Donations Database Migration...");
+    logger.info("[migrate/sponsorships] starting phase-7 sponsorship + donations migration");
 
     // 1. Core Donations Tracking
     await queryPostgres(`
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-    console.log(">> ✅ Created donations table");
+    logger.info("[migrate/sponsorships] donations table ready");
 
     // 2. Sponsorship Contracts (Recurring / Multi-School)
     await queryPostgres(`
@@ -60,14 +61,14 @@ export async function GET(request: Request) {
         email_dispatched BOOLEAN DEFAULT false
       );
     `);
-    console.log(">> ✅ Created donation_receipts mapping");
+    logger.info("[migrate/sponsorships] donation_receipts table ready");
 
     await queryPostgres('COMMIT');
     return NextResponse.json({ message: "Phase 7 Migration Completed (Sponsorship Schema)" });
 
   } catch (error) {
     await queryPostgres('ROLLBACK');
-    console.error("Sponsorship Migration failed", error);
+    logger.error("[migrate/sponsorships] failed", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ message: "Sponsorship Pipeline Error", error }, { status: 500 });
   }
 }

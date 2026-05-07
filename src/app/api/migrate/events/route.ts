@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { requireAdminToken } from "@/lib/server/http/admin-auth";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   const authError = requireAdminToken(request);
@@ -9,7 +10,7 @@ export async function GET(request: Request) {
   try {
     await queryPostgres('BEGIN');
 
-    console.log(">> Initiating Phase 6 Master DB Migration...");
+    logger.info("[migrate/events] starting phase-6 master DB migration");
 
     // 1. Unified Training Events Table
     await queryPostgres(`
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-    console.log(">> ✅ Created training_events");
+    logger.info("[migrate/events] training_events table ready");
 
     // 2. Schools Directory (Expansion if missing)
     await queryPostgres(`
@@ -95,7 +96,7 @@ export async function GET(request: Request) {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-    console.log(">> ✅ Created teachers_directory");
+    logger.info("[migrate/events] teachers_directory table ready");
 
     // 4. Event Registrations (School Level)
     await queryPostgres(`
@@ -147,7 +148,7 @@ export async function GET(request: Request) {
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-    console.log(">> ✅ Created recorded_lessons mapping");
+    logger.info("[migrate/events] recorded_lessons table ready");
 
     // 7. LMS View Tracking (Vimeo Telemetry)
     await queryPostgres(`
@@ -164,14 +165,14 @@ export async function GET(request: Request) {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-    console.log(">> ✅ Created LMS Telemetry mapping");
+    logger.info("[migrate/events] LMS telemetry tables ready");
 
     await queryPostgres('COMMIT');
     return NextResponse.json({ message: "Phase 6 Migration Completed (Events Schema)" });
 
   } catch (error) {
     await queryPostgres('ROLLBACK');
-    console.error("Migration failed", error);
+    logger.error("[migrate/events] failed", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ message: "Migration Pipeline Error", error }, { status: 500 });
   }
 }

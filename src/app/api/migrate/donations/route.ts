@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { requireAdminToken } from "@/lib/server/http/admin-auth";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   const authError = requireAdminToken(request);
   if (authError) return authError;
   try {
-    console.log("Beginning Philanthropy Schema Generation (Phase 6)...");
+    logger.info("[migrate/donations] starting phase-6 philanthropy schema generation");
     await queryPostgres('BEGIN');
 
     // 1. donations
@@ -77,7 +78,7 @@ export async function GET(request: Request) {
 
   } catch (e: unknown) {
     await queryPostgres('ROLLBACK');
-    console.error("Migration failed:", e);
+    logger.error("[migrate/donations] failed", { error: e instanceof Error ? e.message : String(e) });
     return NextResponse.json({ success: false, error: e instanceof Error ? e.message : "Unknown error" }, { status: 500 });
   }
 }
