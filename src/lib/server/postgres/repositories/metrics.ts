@@ -293,9 +293,32 @@ export async function incrementImpactReportDownloadCountAsyncPostgres(id: string
     } catch { /* table may not exist */ }
 }
 
-export async function incrementImpactReportViewCountAsyncPostgres(id: string | number): Promise<void> {
+export async function incrementImpactReportViewCountAsyncPostgres(idOrCode: string | number): Promise<void> {
+    // Callers pass either a numeric id (legacy admin call sites) or a
+    // report_code string (the public /impact-reports/[code] route). The
+    // previous implementation cast everything to Number, which produced
+    // NaN for alphanumeric codes and the UPDATE matched zero rows on
+    // every public visit — view counts never incremented and the
+    // swallowed try/catch hid the silent no-op. Now matches on whichever
+    // column the input shape is, with no ambiguity.
     try {
-        await queryPostgres(`UPDATE impact_reports SET view_count = COALESCE(view_count, 0) + 1 WHERE id = $1`, [Number(id)]);
+        const asNumber = typeof idOrCode === "number" ? idOrCode : Number(idOrCode);
+        const numericId = Number.isFinite(asNumber) ? asNumber : null;
+        if (numericId != null) {
+            await queryPostgres(
+                `UPDATE impact_reports
+                 SET view_count = COALESCE(view_count, 0) + 1
+                 WHERE id = $1 OR report_code = $2`,
+                [numericId, String(idOrCode)],
+            );
+        } else {
+            await queryPostgres(
+                `UPDATE impact_reports
+                 SET view_count = COALESCE(view_count, 0) + 1
+                 WHERE report_code = $1`,
+                [String(idOrCode)],
+            );
+        }
     } catch { /* table may not exist */ }
 }
 

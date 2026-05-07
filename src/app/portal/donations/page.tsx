@@ -1,30 +1,53 @@
 import { PortalShell } from "@/components/portal/PortalShell";
 import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
+import { canAccessFinance } from "@/lib/permissions";
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { redirect } from "next/navigation";
 import { HeartHandshake, Download, Search, CheckCircle, AlertTriangle } from "lucide-react";
 
 export const metadata = { title: "Philanthropy & Donations | Ozeki Portal" };
+export const dynamic = "force-dynamic";
 
 export default async function DonationsDashboard() {
+  // Donor names, totals, and receipt numbers are finance-tier data — restrict
+  // to Super Admin (matches /portal/finance gating). Lower tiers redirect to
+  // their default dashboard rather than seeing a blank "forbidden" page.
   const user = await requirePortalStaffUser();
+  if (!canAccessFinance(user)) {
+    redirect("/portal/dashboard");
+  }
 
-  const donationsQuery = await queryPostgres(
-    `SELECT d.id, d.donation_reference, d.donor_name, d.donor_type, d.amount, d.currency, d.donation_purpose, 
-            d.payment_method, d.payment_status, d.paid_at, pr.receipt_number
-     FROM donations d
-     LEFT JOIN donation_receipts pr ON pr.id = d.receipt_id
-     ORDER BY d.created_at DESC`
-  );
+  // Aggregate KPIs in SQL instead of pulling every row and JS-filtering.
+  // The ledger render below uses a paginated LIMIT to avoid SELECT * scans.
+  const PAGE_LIMIT = 200;
+  const [aggregateQuery, ledgerQuery] = await Promise.all([
+    queryPostgres<{
+      totalRaised: string | null;
+      successCount: string;
+      pendingCount: string;
+    }>(
+      `SELECT
+         COALESCE(SUM(CASE WHEN payment_status = 'Completed' THEN amount ELSE 0 END), 0)::TEXT AS "totalRaised",
+         COUNT(*) FILTER (WHERE payment_status = 'Completed')::TEXT AS "successCount",
+         COUNT(*) FILTER (WHERE payment_status <> 'Completed')::TEXT AS "pendingCount"
+       FROM donations`,
+    ),
+    queryPostgres(
+      `SELECT d.id, d.donation_reference, d.donor_name, d.donor_type, d.amount, d.currency, d.donation_purpose,
+              d.payment_method, d.payment_status, d.paid_at, pr.receipt_number
+       FROM donations d
+       LEFT JOIN donation_receipts pr ON pr.id = d.receipt_id
+       ORDER BY d.created_at DESC
+       LIMIT ${PAGE_LIMIT}`,
+    ),
+  ]);
 
-  const donations = donationsQuery.rows;
-
-  const totalRaised = donations
-      .filter((d: Record<string, unknown>) => d.payment_status === 'Completed')
-      .reduce((sum: number, d: Record<string, unknown>) => sum + Number(d.amount), 0);
-
-  const successCount = donations.filter((d: Record<string, unknown>) => d.payment_status === 'Completed').length;
-  const pendingCount = donations.filter((d: Record<string, unknown>) => d.payment_status !== 'Completed').length;
+  const donations = ledgerQuery.rows;
+  const aggregate = aggregateQuery.rows[0] ?? { totalRaised: "0", successCount: "0", pendingCount: "0" };
+  const totalRaised = Number(aggregate.totalRaised ?? 0);
+  const successCount = Number(aggregate.successCount ?? 0);
+  const pendingCount = Number(aggregate.pendingCount ?? 0);
 
   return (
     <PortalShell

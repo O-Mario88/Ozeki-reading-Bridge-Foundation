@@ -22,7 +22,19 @@ function formatDate(value: string | null | undefined) {
 }
 
 export default async function MethodologyPage() {
-  const aggregate = await getPublicImpactAggregate("country", "Uganda", "FY");
+  // Wrap the aggregate fetch — without this the page hard-500s when
+  // the DB is empty / unreachable / partially bootstrapped. Falls back
+  // to a structurally-empty aggregate so the rest of the page renders
+  // its static methodology copy with "Data not available" placeholders.
+  let aggregate: Awaited<ReturnType<typeof getPublicImpactAggregate>>;
+  try {
+    aggregate = await getPublicImpactAggregate("country", "Uganda", "FY");
+  } catch {
+    aggregate = {
+      meta: { sampleSize: 0, lastUpdated: null },
+      readingLevels: { definition_version: "RLv1.0" },
+    } as unknown as Awaited<ReturnType<typeof getPublicImpactAggregate>>;
+  }
   const toolVersion = aggregate.readingLevels?.definition_version || "RLv1.0";
 
   return (

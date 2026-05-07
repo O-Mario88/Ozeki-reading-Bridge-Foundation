@@ -1,30 +1,51 @@
 import { PortalShell } from "@/components/portal/PortalShell";
 import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
+import { canAccessFinance } from "@/lib/permissions";
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { redirect } from "next/navigation";
 import { Map, Download, Search, CheckCircle, Globe2 } from "lucide-react";
 
 export const metadata = { title: "Geospatial Sponsorships | Ozeki Portal" };
+export const dynamic = "force-dynamic";
 
 export default async function SponsorshipDashboard() {
+  // Sponsor identities, totals, and receipt numbers are finance-tier data —
+  // restrict to Super Admin (matches /portal/finance + /portal/donations).
   const user = await requirePortalStaffUser();
+  if (!canAccessFinance(user)) {
+    redirect("/portal/dashboard");
+  }
 
-  const sponsorshipsQuery = await queryPostgres(
-    `SELECT s.id, s.sponsorship_reference, s.donor_name, s.donor_type, s.sponsorship_type, s.sponsorship_target_name, 
-            s.amount, s.currency, s.sponsorship_focus, s.payment_method, s.payment_status, s.paid_at, pr.receipt_number
-     FROM sponsorships s
-     LEFT JOIN sponsorship_receipts pr ON pr.id = s.receipt_id
-     ORDER BY s.created_at DESC`
-  );
+  // Aggregate KPIs in SQL; ledger uses LIMIT to avoid SELECT * scans.
+  const PAGE_LIMIT = 200;
+  const [aggregateQuery, ledgerQuery] = await Promise.all([
+    queryPostgres<{
+      totalGeospatial: string | null;
+      schoolCount: string;
+      regionCount: string;
+    }>(
+      `SELECT
+         COALESCE(SUM(CASE WHEN payment_status = 'Completed' THEN amount ELSE 0 END), 0)::TEXT AS "totalGeospatial",
+         COUNT(*) FILTER (WHERE payment_status = 'Completed' AND sponsorship_type = 'school')::TEXT AS "schoolCount",
+         COUNT(*) FILTER (WHERE payment_status = 'Completed' AND sponsorship_type = 'region')::TEXT AS "regionCount"
+       FROM sponsorships`,
+    ),
+    queryPostgres(
+      `SELECT s.id, s.sponsorship_reference, s.donor_name, s.donor_type, s.sponsorship_type, s.sponsorship_target_name,
+              s.amount, s.currency, s.sponsorship_focus, s.payment_method, s.payment_status, s.paid_at, pr.receipt_number
+       FROM sponsorships s
+       LEFT JOIN sponsorship_receipts pr ON pr.id = s.receipt_id
+       ORDER BY s.created_at DESC
+       LIMIT ${PAGE_LIMIT}`,
+    ),
+  ]);
 
-  const sponsorships = sponsorshipsQuery.rows;
-
-  const totalGeospatial = sponsorships
-      .filter((d: Record<string, unknown>) => d.payment_status === 'Completed')
-      .reduce((sum: number, d: Record<string, unknown>) => sum + Number(d.amount), 0);
-
-  const schoolCount = sponsorships.filter((d: Record<string, unknown>) => d.payment_status === 'Completed' && d.sponsorship_type === 'school').length;
-  const regionCount = sponsorships.filter((d: Record<string, unknown>) => d.payment_status === 'Completed' && d.sponsorship_type === 'region').length;
+  const sponsorships = ledgerQuery.rows;
+  const aggregate = aggregateQuery.rows[0] ?? { totalGeospatial: "0", schoolCount: "0", regionCount: "0" };
+  const totalGeospatial = Number(aggregate.totalGeospatial ?? 0);
+  const schoolCount = Number(aggregate.schoolCount ?? 0);
+  const regionCount = Number(aggregate.regionCount ?? 0);
 
   return (
     <PortalShell

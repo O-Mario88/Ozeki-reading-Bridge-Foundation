@@ -1,5 +1,11 @@
 import { queryPostgres } from "@/lib/server/postgres/client";
 import Link from "next/link";
+import { requirePortalStaffUser } from "@/lib/auth";
+import { canAccessFinance } from "@/lib/permissions";
+import { redirect } from "next/navigation";
+import { logger } from "@/lib/logger";
+
+export const dynamic = "force-dynamic";
 
 // Server Action simulating the query compilation across the new multi-domain schema
 async function fetchMasterTelemetry() {
@@ -32,13 +38,20 @@ async function fetchMasterTelemetry() {
       scheduledEvents: 0,
     };
   } catch (err) {
-    console.error("Telemetry map failed:", err);
+    logger.error("[portal/analytics] telemetry aggregation failed", { error: err instanceof Error ? err.message : String(err) });
   }
 
   return stats;
 }
 
 export default async function AnalyticsDashboard() {
+  // Auth + finance gate: this page surfaces aggregate revenue, donor counts,
+  // and engagement totals derived from donations / event_registrations /
+  // lesson_view_sessions. Treat it as finance-tier data — Super Admin only.
+  const user = await requirePortalStaffUser();
+  if (!canAccessFinance(user)) {
+    redirect("/portal/dashboard");
+  }
   const stats = await fetchMasterTelemetry();
 
   return (

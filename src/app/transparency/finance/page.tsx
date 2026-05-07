@@ -116,11 +116,33 @@ function MetricCard({ title, subtitle, figure, benchmarks }: MetricCardProps) {
 }
 
 export default async function PublicFinanceTransparencyPage() {
-  const summary = await getCostPerBeneficiarySummary();
-  const [reachedBenchmarks, improvedBenchmarks, trainedBenchmarks] = await Promise.all([
-    listPeerBenchmarksByMetric("cost_per_learner_reached"),
-    listPeerBenchmarksByMetric("cost_per_learner_improved"),
-    listPeerBenchmarksByMetric("cost_per_teacher_trained"),
+  // Wrap each await — without this the page hard-500s when the cost-per-
+  // beneficiary roll-up tables are missing (partially-bootstrapped DB) or
+  // when the peer-benchmarks table has no rows. Falls back to the same
+  // empty shape each function returns on success-but-empty so all the
+  // downstream "—" placeholders render correctly.
+  // Empty-shape fallback that matches CostPerBeneficiarySummary so the
+  // downstream renderers ("—" placeholders) work when the cost-per-
+  // beneficiary roll-up tables are missing or empty. Without this the
+  // page hard-500s on a fresh DB.
+  const emptySummary = {
+    generatedAt: new Date().toISOString(),
+    ugxPerUsd: 3700,
+    programmeSpendUgx: 0,
+    learnersReached: 0,
+    learnersImproved: 0,
+    teachersTrained: 0,
+    figures: {
+      learnersReached: { metricKey: "cost_per_learner_reached" as const, totalProgrammeSpendUgx: 0, beneficiaryCount: 0, costPerUnitUgx: null, costPerUnitUsd: null },
+      learnersImproved: { metricKey: "cost_per_learner_improved" as const, totalProgrammeSpendUgx: 0, beneficiaryCount: 0, costPerUnitUgx: null, costPerUnitUsd: null },
+      teachersTrained: { metricKey: "cost_per_teacher_trained" as const, totalProgrammeSpendUgx: 0, beneficiaryCount: 0, costPerUnitUgx: null, costPerUnitUsd: null },
+    },
+  };
+  const [summary, reachedBenchmarks, improvedBenchmarks, trainedBenchmarks] = await Promise.all([
+    getCostPerBeneficiarySummary().catch(() => emptySummary),
+    listPeerBenchmarksByMetric("cost_per_learner_reached").catch(() => []),
+    listPeerBenchmarksByMetric("cost_per_learner_improved").catch(() => []),
+    listPeerBenchmarksByMetric("cost_per_teacher_trained").catch(() => []),
   ]);
 
   return (
