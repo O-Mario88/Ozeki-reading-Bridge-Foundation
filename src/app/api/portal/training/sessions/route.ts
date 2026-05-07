@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import {
   createTrainingSession,
   listOnlineTrainingSessions,
@@ -23,7 +24,7 @@ export async function GET() {
 
     return NextResponse.json({ sessions: filtered });
   } catch (error) {
-    console.error("List training sessions failed:", error);
+    logger.error("[portal/training/sessions] list training sessions failed", { error: error instanceof Error ? error.message : String(error) });
     return new NextResponse("Internal Error", { status: 500 });
   }
 }
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
       calendarEventId = eventRes.calendarEventId;
       meetJoinUrl = eventRes.meetJoinUrl;
     } catch (apiErr) {
-      console.warn("Could not create Meet event, continuing without it.", apiErr);
+      logger.warn("[portal/training/sessions] could not create Meet event, continuing without it", { error: apiErr instanceof Error ? apiErr.message : String(apiErr) });
     }
 
     // Step 2: Create DB Record
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ id: sessionId, calendarEventId, meetJoinUrl });
   } catch (error) {
-    console.error("Create training session failed:", error);
+    logger.error("[portal/training/sessions] create training session failed", { error: error instanceof Error ? error.message : String(error) });
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

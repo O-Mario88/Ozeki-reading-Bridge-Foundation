@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { getWorkQueuePostgres, type WorkQueueOptions } from "@/lib/server/postgres/repositories/command-center";
 import { clampLimit } from "@/lib/server/http/pagination";
 
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ data: items, summary, lastUpdated: new Date().toISOString() });
   } catch (error) {
-    console.error("[api/portal/command-center/work-queue]", error);
+    logger.error("[portal/command-center/work-queue] work queue unavailable", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Work queue unavailable" }, { status: 500 });
   }
 }

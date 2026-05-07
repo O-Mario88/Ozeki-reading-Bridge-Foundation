@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import {
   getTrainingFollowUpsPostgres,
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
     });
     return NextResponse.json({ data: rows, lastUpdated: new Date().toISOString() });
   } catch (error) {
-    console.error("[api/portal/training/follow-ups GET]", error);
+    logger.error("[portal/training/follow-ups] GET unavailable", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Unavailable" }, { status: 500 });
   }
 }
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid payload" }, { status: 400 });
     }
-    console.error("[api/portal/training/follow-ups POST]", error);
+    logger.error("[portal/training/follow-ups] POST failed to seed follow-ups", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Failed to seed follow-ups" }, { status: 500 });
   }
 }

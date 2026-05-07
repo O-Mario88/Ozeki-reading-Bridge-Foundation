@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { getUpcomingTrainingsPostgres } from "@/lib/server/postgres/repositories/training-intelligence";
 import { clampLimit } from "@/lib/server/http/pagination";
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
     const data = await getUpcomingTrainingsPostgres({ fromDate: from, toDate: to, district, limit });
     return NextResponse.json({ data, lastUpdated: new Date().toISOString() });
   } catch (error) {
-    console.error("[api/portal/training/schedule GET]", error);
+    logger.error("[portal/training/schedule] GET unavailable", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Unavailable" }, { status: 500 });
   }
 }
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid payload" }, { status: 400 });
     }
-    console.error("[api/portal/training/schedule POST]", error);
+    logger.error("[portal/training/schedule] POST failed to create schedule", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Failed to create schedule" }, { status: 500 });
   }
 }

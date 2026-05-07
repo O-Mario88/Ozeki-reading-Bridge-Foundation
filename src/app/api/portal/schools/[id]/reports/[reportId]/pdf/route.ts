@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPortalUserOrRedirect } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { generateAcademicReportPdf, AcademicReportData } from "@/lib/server/pdf/academic-report-template";
 
@@ -83,7 +84,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error generating School Performance PDF:", error);
+    logger.error("[portal/schools/:id/reports/:reportId/pdf] error generating School Performance PDF", { error: error instanceof Error ? error.message : String(error) });
     return new NextResponse("Failed to generate PDF", { status: 500 });
   }
 }

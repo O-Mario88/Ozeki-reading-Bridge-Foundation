@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import {
   listCertificateEligibleAttendeesPostgres,
@@ -147,7 +148,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid payload" }, { status: 400 });
     }
-    console.error("[api/portal/training/certificates/issue]", error);
+    logger.error("[portal/training/certificates/issue] failed to issue certificates", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Failed to issue certificates" }, { status: 500 });
   }
 }

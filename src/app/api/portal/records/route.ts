@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createPortalRecord, listPortalRecords, getPortalRecordByLocalId } from "@/services/dataService";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { PortalRecordFilters, PortalRecordPayload, PortalUser } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -199,7 +200,7 @@ export async function POST(request: Request) {
           );
         }
       } catch (e) {
-        console.error("Failed to extract EGRA learners from portal record", e);
+        logger.error("[portal/records] failed to extract EGRA learners from portal record", { error: e instanceof Error ? e.message : String(e) });
       }
     }
 
@@ -215,7 +216,7 @@ export async function POST(request: Request) {
           payloadObj: payload.payload as Record<string, unknown>,
         });
       } catch (e) {
-        console.error("Failed to extract coaching visit cleanly:", e);
+        logger.error("[portal/records] failed to extract coaching visit cleanly", { error: e instanceof Error ? e.message : String(e) });
       }
     }
 

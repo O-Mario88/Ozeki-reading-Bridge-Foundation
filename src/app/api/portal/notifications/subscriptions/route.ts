@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import {
   listSubscriptionsForUserPostgres,
   upsertSubscriptionPostgres,
@@ -14,7 +15,7 @@ export async function GET() {
     const data = await listSubscriptionsForUserPostgres(user.id);
     return NextResponse.json({ data });
   } catch (error) {
-    console.error("[api/portal/notifications/subscriptions GET]", error);
+    logger.error("[portal/notifications/subscriptions] GET unavailable", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Unavailable" }, { status: 500 });
   }
 }
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid payload" }, { status: 400 });
     }
-    console.error("[api/portal/notifications/subscriptions POST]", error);
+    logger.error("[portal/notifications/subscriptions] POST update failed", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 }

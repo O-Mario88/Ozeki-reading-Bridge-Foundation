@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireFinanceSuperAdmin } from "@/app/api/portal/finance/_utils";
+import { logger } from "@/lib/logger";
 import { listFinancePublicSnapshots, listFinanceAuditedStatements } from "@/services/financeService";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -75,7 +76,7 @@ export async function GET(request: Request) {
     if (getErrorCode(error) === "ENOENT") {
       return new NextResponse("File not found on disk", { status: 404 });
     }
-    console.error("Admin Download error:", error);
+    logger.error("[portal/finance/transparency/download] admin download error", { error: error instanceof Error ? error.message : String(error) });
     return new NextResponse("Internal server error", { status: 500 });
   }
 }

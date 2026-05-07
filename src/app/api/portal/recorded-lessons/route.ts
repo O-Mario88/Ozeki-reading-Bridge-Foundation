@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getPortalUserFromSession } from "@/services/dataService";
 import { cookies } from "next/headers";
 import { PORTAL_SESSION_COOKIE } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { createRecordedLessonPostgres, listRecordedLessonsPostgres } from "@/lib/server/postgres/repositories/recorded-lessons";
 import { createOzekiCalendarEventWithMeet } from "@/lib/google-workspace";
 
@@ -49,7 +50,7 @@ export async function GET() {
      const lessons = await listRecordedLessonsPostgres();
      return NextResponse.json({ lessons });
   } catch (error) {
-     console.error("[recorded-lessons] Failed to list lessons:", error);
+     logger.error("[portal/recorded-lessons] failed to list lessons", { error: error instanceof Error ? error.message : String(error) });
      return NextResponse.json({ error: "Server Error" }, { status: 500 });
   }
 }
@@ -94,7 +95,7 @@ export async function POST(request: Request) {
          googleMeetLink = calRes.meetLink || undefined;
          googleMeetConferenceId = calRes.conferenceId;
       } catch (calErr) {
-         console.warn("[recorded-lessons] Failed to create Google Calendar Block:", calErr);
+         logger.warn("[portal/recorded-lessons] failed to create Google Calendar block", { error: calErr instanceof Error ? calErr.message : String(calErr) });
       }
     }
 
@@ -129,7 +130,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message }, { status: 400 });
     }
-    console.error("[recorded-lessons] Failed to create lesson:", error);
+    logger.error("[portal/recorded-lessons] failed to create lesson", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }

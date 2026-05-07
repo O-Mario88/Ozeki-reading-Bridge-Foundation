@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { bulkAssignCoachPostgres } from "@/lib/server/postgres/repositories/command-center";
 import { auditLog } from "@/lib/server/audit/log";
 
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid payload" }, { status: 400 });
     }
-    console.error("[api/portal/command-center/bulk/coach-assign]", error);
+    logger.error("[portal/command-center/bulk/coach-assign] bulk assignment failed", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Bulk assignment failed" }, { status: 500 });
   }
 }

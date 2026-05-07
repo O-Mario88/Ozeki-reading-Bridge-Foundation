@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getPortalUserFromSession } from "@/services/dataService";
 import { canManagePortalUsers } from "@/lib/db-api";
+import { logger } from "@/lib/logger";
 import { deleteContactPostgres } from "@/lib/server/postgres/repositories/schools";
 import { auditLog } from "@/lib/server/audit/log";
 import type { PortalUser } from "@/lib/types";
@@ -57,7 +58,7 @@ export async function DELETE(
       );
     }
   } catch (error) {
-    console.error("Error deleting contact:", error);
+    logger.error("[portal/contacts/:contactId] error deleting contact", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: "Internal server error during contact deletion" },
       { status: 500 },

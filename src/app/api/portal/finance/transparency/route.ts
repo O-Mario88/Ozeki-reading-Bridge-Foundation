@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireFinanceSuperAdmin } from "@/app/api/portal/finance/_utils";
+import { logger } from "@/lib/logger";
 import {
     listFinancePublicSnapshots,
     listFinanceAuditedStatements,
@@ -50,7 +51,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ snapshots, audited });
     } catch (error: unknown) {
-        console.error("GET /api/portal/finance/transparency error:", error);
+        logger.error("[portal/finance/transparency] GET failed", { error: error instanceof Error ? error.message : String(error) });
         return NextResponse.json(
             { error: errorMessage(error, "Failed to load transparency data") },
             { status: 500 },
@@ -112,7 +113,7 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: "Unknown action type" }, { status: 400 });
         }
     } catch (error: unknown) {
-        console.error("POST /api/portal/finance/transparency error:", error);
+        logger.error("[portal/finance/transparency] POST failed", { error: error instanceof Error ? error.message : String(error) });
         return NextResponse.json(
             { error: errorMessage(error, "Failed to process transparency action") },
             { status: 500 },

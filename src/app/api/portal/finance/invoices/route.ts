@@ -7,6 +7,7 @@ import {
 } from "@/services/financeService";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
 import { csvHeaders, requireFinanceEditor } from "@/app/api/portal/finance/_utils";
+import { logger } from "@/lib/logger";
 import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
@@ -115,10 +116,10 @@ export async function POST(request: Request) {
       const issue = error.issues[0];
       const field = issue?.path?.join(" → ") || "unknown";
       const msg = `${field}: ${issue?.message || "Invalid value"}`;
-      console.error("[INVOICE POST] Zod validation error:", msg);
+      logger.error("[portal/finance/invoices] POST zod validation error", { message: msg });
       return NextResponse.json({ error: msg }, { status: 400 });
     }
-    console.error("[INVOICE POST] Error:", error instanceof Error ? error.message : error);
+    logger.error("[portal/finance/invoices] POST failed to create invoice", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to create invoice." },
       { status: 400 },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateSupportRequest } from "@/services/dataService";
 import { getAuthenticatedPortalUser, canReview } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 export async function PATCH(
     req: NextRequest,
@@ -32,7 +33,7 @@ export async function PATCH(
         updateSupportRequest(id, updates);
         return NextResponse.json({ success: true });
     } catch (error: unknown) {
-        console.error("Error updating support request:", error);
+        logger.error("[portal/support/:id] error updating support request", { error: error instanceof Error ? error.message : String(error) });
         return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
     }
 }

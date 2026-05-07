@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { getTeacherLearningJourneyPostgres } from "@/lib/server/postgres/repositories/lesson-lms";
 
 export const runtime = "nodejs";
@@ -17,7 +18,7 @@ export async function GET(request: Request) {
     const journey = await getTeacherLearningJourneyPostgres(resolvedUserId);
     return NextResponse.json(journey);
   } catch (error) {
-    console.error("[api/portal/my-learning]", error);
+    logger.error("[portal/my-learning] journey unavailable", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Journey unavailable" }, { status: 500 });
   }
 }

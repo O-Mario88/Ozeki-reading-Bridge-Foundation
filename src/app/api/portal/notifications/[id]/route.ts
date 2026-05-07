@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { markNotificationReadPostgres } from "@/lib/server/postgres/repositories/notifications";
 
 export const runtime = "nodejs";
@@ -13,7 +14,7 @@ export async function PATCH(_request: Request, { params }: RouteContext) {
     await markNotificationReadPostgres(Number(id), user.id);
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("[api/portal/notifications/id PATCH]", error);
+    logger.error("[portal/notifications/:id] PATCH update failed", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 }

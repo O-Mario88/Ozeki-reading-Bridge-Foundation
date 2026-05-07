@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { getPortalUserOrRedirect } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { getFinanceReceiptByIdPostgres, getFinanceInvoiceByIdPostgres } from "@/lib/server/postgres/repositories/finance";
 import { renderReceiptPdf } from "@/lib/server/pdf/finance-pdf-direct";
 import type { FinancePaymentAllocationRecord } from "@/lib/types";
@@ -62,7 +63,7 @@ export async function GET(
     });
   } catch (error) {
     if (isRedirectError(error)) throw error;
-    console.error("Error generating receipt PDF:", error);
+    logger.error("[portal/finance/receipts/:id/pdf] error generating receipt PDF", { error: error instanceof Error ? error.message : String(error) });
     return new NextResponse("Failed to generate PDF", { status: 500 });
   }
 }

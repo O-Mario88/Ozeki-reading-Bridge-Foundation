@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import {
   listWorkflowsPostgres,
   createWorkflowPostgres,
@@ -17,7 +18,7 @@ export async function GET() {
     const data = await listWorkflowsPostgres({});
     return NextResponse.json({ data, lastUpdated: new Date().toISOString() });
   } catch (error) {
-    console.error("[api/portal/workflows GET]", error);
+    logger.error("[portal/workflows] GET unavailable", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Unavailable" }, { status: 500 });
   }
 }
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid payload" }, { status: 400 });
     }
-    console.error("[api/portal/workflows POST]", error);
+    logger.error("[portal/workflows] POST create failed", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Create failed" }, { status: 500 });
   }
 }

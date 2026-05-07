@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { listActionPlanFollowUpsPostgres } from "@/lib/server/postgres/repositories/coaching-qa";
 import { clampLimit } from "@/lib/server/http/pagination";
 
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ data, summary, lastUpdated: new Date().toISOString() });
   } catch (error) {
-    console.error("[api/portal/coaching-qa/follow-ups]", error);
+    logger.error("[portal/coaching-qa/follow-ups] follow-ups unavailable", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Follow-ups unavailable" }, { status: 500 });
   }
 }

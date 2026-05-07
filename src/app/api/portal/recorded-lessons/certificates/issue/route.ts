@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import {
   generateLessonCertificatePdf,
@@ -94,7 +95,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid payload" }, { status: 400 });
     }
-    console.error("[api/portal/recorded-lessons/certificates/issue]", error);
+    logger.error("[portal/recorded-lessons/certificates/issue] certificate issuance failed", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Certificate issuance failed" }, { status: 500 });
   }
 }

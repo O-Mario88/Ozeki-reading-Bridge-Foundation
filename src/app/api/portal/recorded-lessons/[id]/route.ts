@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPortalUserFromSession } from "@/services/dataService";
 import { cookies } from "next/headers";
 import { PORTAL_SESSION_COOKIE } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { queryPostgres } from "@/lib/server/postgres/client";
 
 export const runtime = "nodejs";
@@ -54,7 +55,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
      return NextResponse.json({ ok: true });
   } catch (error) {
-     console.error("[drive-bind] Failed to patch drive bind:", error);
+     logger.error("[portal/recorded-lessons/:id] failed to patch drive bind", { error: error instanceof Error ? error.message : String(error) });
      return NextResponse.json({ error: "Failed to bind recording." }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPortalUserOrRedirect } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { getPortalOperationalReportsData } from "@/services/dataService";
 import { buildOperationsWorkspaceHtml } from "@/lib/server/pdf/program-pdf-templates";
 import { renderBrandedPdf } from "@/lib/server/pdf/render";
@@ -50,7 +51,7 @@ export async function GET(_request: Request) {
       },
     });
   } catch (error) {
-    console.error("Error generating Operations PDF:", error);
+    logger.error("[portal/reports/operations/pdf] error generating Operations PDF", { error: error instanceof Error ? error.message : String(error) });
     return new NextResponse("Failed to generate PDF", { status: 500 });
   }
 }

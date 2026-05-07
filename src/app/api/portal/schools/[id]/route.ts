@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPortalUserFromSession, deleteSchoolDirectoryRecordPostgres } from "@/services/dataService";
 import { canManagePortalUsers } from "@/lib/db-api";
+import { logger } from "@/lib/logger";
 import { cookies } from "next/headers";
 import { auditLog } from "@/lib/server/audit/log";
 
@@ -49,7 +50,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       return NextResponse.json({ error: "School not found or could not be deleted" }, { status: 404 });
     }
   } catch (error) {
-    console.error("Error deleting school:", error);
+    logger.error("[portal/schools/:id] error deleting school", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: "Internal server error during deletion" },
       { status: 500 }

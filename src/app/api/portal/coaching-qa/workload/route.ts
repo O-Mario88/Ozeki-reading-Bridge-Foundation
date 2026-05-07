@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import {
   getCoachWorkloadPostgres,
   getDistrictCoverageMapPostgres,
@@ -36,7 +37,7 @@ export async function GET(request: Request) {
       lastUpdated: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("[api/portal/coaching-qa/workload]", error);
+    logger.error("[portal/coaching-qa/workload] workload data unavailable", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Workload data unavailable" }, { status: 500 });
   }
 }

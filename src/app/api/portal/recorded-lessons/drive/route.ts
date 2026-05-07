@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPortalUserFromSession } from "@/services/dataService";
 import { cookies } from "next/headers";
 import { PORTAL_SESSION_COOKIE } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { listRecordingFilesFromDrive } from "@/lib/google-workspace";
 
 export const runtime = "nodejs";
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
      const files = await listRecordingFilesFromDrive(folderId);
      return NextResponse.json({ files });
   } catch (error) {
-     console.error("[drive-import] Failed to list drive files:", error);
+     logger.error("[portal/recorded-lessons/drive] failed to list drive files", { error: error instanceof Error ? error.message : String(error) });
      return NextResponse.json({ error: "Failed to list Google Drive recordings." }, { status: 500 });
   }
 }

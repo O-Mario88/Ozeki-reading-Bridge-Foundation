@@ -5,6 +5,7 @@ import {
   listSupportRequests,
 } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import {
   SupportRequestInput,
   SupportRequestUrgency,
@@ -106,7 +107,7 @@ export async function GET(_req: NextRequest) {
     const requests = await listSupportRequests(filters);
     return NextResponse.json(requests);
   } catch (error: unknown) {
-    console.error("Error listing support requests:", error);
+    logger.error("[portal/support] error listing support requests", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: errorMessage(error, "Failed to list support requests") },
       { status: 500 },
@@ -381,7 +382,7 @@ export async function POST(req: NextRequest) {
     const newRequest = await createSupportRequest(input, user?.id ?? 0);
     return NextResponse.json(newRequest, { status: 201 });
   } catch (error: unknown) {
-    console.error("Error creating support request:", error);
+    logger.error("[portal/support] error creating support request", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: errorMessage(error, "Failed to create support request") },
       { status: 500 },

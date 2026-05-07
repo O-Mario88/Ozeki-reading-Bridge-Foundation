@@ -8,6 +8,7 @@ import {
     saveObservationRubric,
 } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { RubricIndicator } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -146,7 +147,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ success: true, data: result });
     } catch (err) {
-        console.error("NLIS form submission error:", err);
+        logger.error("[portal/nlis] form submission error", { error: err instanceof Error ? err.message : String(err) });
         return NextResponse.json({ error: "Failed to save record" }, { status: 500 });
     }
 }

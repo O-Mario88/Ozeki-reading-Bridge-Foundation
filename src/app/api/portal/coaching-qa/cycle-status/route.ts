@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { getCoachingCycleStatusPostgres } from "@/lib/server/postgres/repositories/coaching-qa";
 
 export const runtime = "nodejs";
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ data, summary, target, lastUpdated: new Date().toISOString() });
   } catch (error) {
-    console.error("[api/portal/coaching-qa/cycle-status]", error);
+    logger.error("[portal/coaching-qa/cycle-status] cycle status unavailable", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Cycle status unavailable" }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { getPortalUserOrRedirect } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import {
   getIncomeVsExpenseSummary,
   getBudgetVsActual,
@@ -134,7 +135,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ type:
     });
   } catch (error) {
     if (isRedirectError(error)) throw error;
-    console.error("Error generating report PDF:", error);
+    logger.error("[portal/finance/reports/:type/pdf] error generating report PDF", { error: error instanceof Error ? error.message : String(error) });
     return new NextResponse("Failed to generate PDF", { status: 500 });
   }
 }

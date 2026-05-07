@@ -10,6 +10,7 @@ import {
   updatePortalUserPermissions,
 } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { auditLog } from "@/lib/server/audit/log";
 import { firstPasswordPolicyError } from "@/lib/server/auth/password-policy";
 
@@ -128,7 +129,7 @@ export async function POST(request: Request) {
           role: payload.role,
         });
       } catch (emailError) {
-        console.warn("[INVITE] Email send failed:", emailError instanceof Error ? emailError.message : emailError);
+        logger.warn("[portal/users] invite email send failed", { error: emailError instanceof Error ? emailError.message : String(emailError) });
         // User was created successfully — don't fail the whole operation
       }
     }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPortalUserFromSession } from "@/services/dataService";
 import { cookies } from "next/headers";
 import { PORTAL_SESSION_COOKIE } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { makeDriveFilePublicWithLink } from "@/lib/google-workspace";
 import { uploadVideoToVimeoByPull } from "@/lib/vimeo";
@@ -69,7 +70,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
      return NextResponse.json({ ok: true, status: "Vimeo Processing" });
   } catch (error) {
-     console.error("[vimeo-pull] Failed to sync to vimeo:", error);
+     logger.error("[portal/recorded-lessons/:id/upload] failed to sync to vimeo", { error: error instanceof Error ? error.message : String(error) });
      // Fallback to error status
      await queryPostgres(`UPDATE recorded_lessons SET status = 'Failed' WHERE id = $1`, [lessonId]);
      return NextResponse.json({ error: "Failed to upload to Vimeo." }, { status: 500 });

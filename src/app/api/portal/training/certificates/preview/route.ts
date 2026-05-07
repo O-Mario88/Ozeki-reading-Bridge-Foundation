@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import {
   generateTrainingCertificatePdf,
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error("[api/portal/training/certificates/preview]", error);
+    logger.error("[portal/training/certificates/preview] preview unavailable", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Preview unavailable" }, { status: 500 });
   }
 }

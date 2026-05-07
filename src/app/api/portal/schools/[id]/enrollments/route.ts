@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { createSchoolEnrollment, getSchoolEnrollments } from "@/lib/server/postgres/repositories/school-metrics";
 
 export const runtime = "nodejs";
@@ -31,7 +32,7 @@ export async function GET(
     const enrollments = await getSchoolEnrollments(schoolId);
     return NextResponse.json({ items: enrollments });
   } catch (error) {
-    console.error("Failed to fetch enrollments:", error);
+    logger.error("[portal/schools/:id/enrollments] failed to fetch enrollments", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Failed to fetch enrollments" }, { status: 500 });
   }
 }

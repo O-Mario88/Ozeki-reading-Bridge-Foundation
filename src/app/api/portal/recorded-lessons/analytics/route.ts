@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { getLessonContentAnalyticsPostgres } from "@/lib/server/postgres/repositories/lesson-lms";
 import { clampLimit } from "@/lib/server/http/pagination";
 
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ data, summary, lastUpdated: new Date().toISOString() });
   } catch (error) {
-    console.error("[api/portal/recorded-lessons/analytics]", error);
+    logger.error("[portal/recorded-lessons/analytics] analytics unavailable", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Analytics unavailable" }, { status: 500 });
   }
 }

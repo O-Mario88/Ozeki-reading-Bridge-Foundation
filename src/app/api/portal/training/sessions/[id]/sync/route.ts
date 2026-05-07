@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { getTrainingSession } from "@/lib/training-db";
 import { syncMeetArtifactsJob, generateAiMeetingNotesJob, syncConferenceRecordJob } from "@/lib/training-jobs";
 
@@ -26,19 +27,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             if (!session.conferenceRecordId) {
                 await syncConferenceRecordJob(sessionId);
             }
-            syncMeetArtifactsJob(sessionId).catch(console.error);
+            syncMeetArtifactsJob(sessionId).catch((err) => logger.error("[portal/training/sessions/:id/sync] artifact sync job failed", { error: err instanceof Error ? err.message : String(err) }));
             return NextResponse.json({ success: true, message: "Artifact sync started" });
         }
 
         if (action === "generate_notes") {
-            generateAiMeetingNotesJob(sessionId).catch(console.error);
+            generateAiMeetingNotesJob(sessionId).catch((err) => logger.error("[portal/training/sessions/:id/sync] AI notes job failed", { error: err instanceof Error ? err.message : String(err) }));
             return NextResponse.json({ success: true, message: "AI Notes generation started" });
         }
 
         return new NextResponse("Invalid action", { status: 400 });
 
     } catch (error) {
-        console.error("Sync action failed:", error);
+        logger.error("[portal/training/sessions/:id/sync] sync action failed", { error: error instanceof Error ? error.message : String(error) });
         return new NextResponse("Internal Error", { status: 500 });
     }
 }

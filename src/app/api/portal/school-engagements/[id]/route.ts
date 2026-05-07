@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import {
   getSchoolEngagementByIdPostgres,
   updateSchoolEngagementPostgres,
@@ -35,7 +36,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     }
     return NextResponse.json({ engagement });
   } catch (err) {
-    console.error("[api/portal/school-engagements/:id] GET failed", err);
+    logger.error("[portal/school-engagements/:id] GET failed to load engagement", { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: "Failed to load engagement." }, { status: 500 });
   }
 }
@@ -59,7 +60,7 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: err.issues[0]?.message ?? "Invalid payload." }, { status: 400 });
     }
-    console.error("[api/portal/school-engagements/:id] PATCH failed", err);
+    logger.error("[portal/school-engagements/:id] PATCH failed to update engagement", { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: "Failed to update engagement." }, { status: 500 });
   }
 }

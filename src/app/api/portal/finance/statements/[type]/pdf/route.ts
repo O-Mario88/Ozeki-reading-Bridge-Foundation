@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { getPortalUserOrRedirect } from "@/lib/auth";
-import { 
-  getStatementOfFinancialPosition, 
-  getStatementOfActivities, 
-  getCashFlowStatement, 
-  getBudgetVsActual, 
-  getGrantAndDonorReport 
+import { logger } from "@/lib/logger";
+import {
+  getStatementOfFinancialPosition,
+  getStatementOfActivities,
+  getCashFlowStatement,
+  getBudgetVsActual,
+  getGrantAndDonorReport
 } from "@/lib/server/postgres/repositories/finance-reports";
 import { generateFinancialNarration } from "@/lib/server/ai/finance-narration";
 import { generateFinancialPdf, FinancialReportData } from "@/lib/server/pdf/financial-report-pdf-lib";
@@ -244,7 +245,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ type:
     });
   } catch (error) {
     if (isRedirectError(error)) throw error;
-    console.error("Error generating AI financial report:", error);
+    logger.error("[portal/finance/statements/:type/pdf] error generating AI financial report", { error: error instanceof Error ? error.message : String(error) });
     return new NextResponse("Failed to generate PDF", { status: 500 });
   }
 }

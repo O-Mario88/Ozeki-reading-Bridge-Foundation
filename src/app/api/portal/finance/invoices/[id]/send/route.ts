@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { sendFinanceInvoice } from "@/services/financeService";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
+import { logger } from "@/lib/logger";
 import { readOptionalJsonBody, JsonBodyError } from "@/lib/server/http/json-body";
 import { auditLog } from "@/lib/server/audit/log";
 
@@ -49,7 +50,7 @@ export async function POST(
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message || "Invalid payload." }, { status: 400 });
     }
-    console.error("[api/portal/finance/invoices/send]", error);
+    logger.error("[portal/finance/invoices/:id/send] failed to send invoice", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Failed to send invoice." }, { status: 400 });
   }
 }

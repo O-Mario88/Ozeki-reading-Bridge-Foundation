@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { getLearnerAttributionForEngagementPostgres } from "@/lib/server/postgres/repositories/school-engagements";
 
 export const runtime = "nodejs";
@@ -32,7 +33,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       rows,
     });
   } catch (err) {
-    console.error("[api/portal/school-engagements/:id/attribution] GET failed", err);
+    logger.error("[portal/school-engagements/:id/attribution] GET failed to load attribution", { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: "Failed to load attribution." }, { status: 500 });
   }
 }

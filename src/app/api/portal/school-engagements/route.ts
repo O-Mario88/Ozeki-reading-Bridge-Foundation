@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import {
   createSchoolEngagementPostgres,
   listSchoolEngagementsPostgres,
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
     });
     return NextResponse.json({ engagements: rows });
   } catch (err) {
-    console.error("[api/portal/school-engagements] GET failed", err);
+    logger.error("[portal/school-engagements] GET failed to list engagements", { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: "Failed to list engagements." }, { status: 500 });
   }
 }
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: err.issues[0]?.message ?? "Invalid payload." }, { status: 400 });
     }
-    console.error("[api/portal/school-engagements] POST failed", err);
+    logger.error("[portal/school-engagements] POST failed to create engagement", { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: "Failed to create engagement." }, { status: 500 });
   }
 }
