@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { queryPostgres } from "@/lib/server/postgres/client";
-import { createGoogleCalendarEvent } from "@/lib/google-calendar";
+import { createGoogleCalendarEvent, isGoogleCalendarConfigured } from "@/lib/google-calendar";
+import { logger } from "@/lib/logger";
 
 
 export async function POST(request: Request) {
@@ -37,35 +38,52 @@ export async function POST(request: Request) {
     // Generate Unique Internal OzekiRead Code
     const eventCode = `EV-${Math.random().toString(36).substring(2, 7).toUpperCase()}-${new Date().getTime().toString().slice(-4)}`;
 
-    await queryPostgres('BEGIN');
+    // NOTE: Previously wrapped this whole handler in BEGIN/COMMIT via separate
+    // queryPostgres calls — but those run on different pooled clients, so the
+    // transaction was illusory. The remaining work is one INSERT (atomic at
+    // the statement level) so the wrapper added no real protection.
 
-    // 1. Google Scheduler Execution (Unified Route)
-    let googleMeetUrl = null;
-    let googleCalendarEventId = null;
+    // 1. Google Scheduler Execution (Unified Route).
+    //
+    // Google integration is optional. If credentials are missing OR the
+    // Calendar/Meet API call fails, the event is still created — just without
+    // a real Meet link. The portal surfaces this clearly so the operator
+    // knows to add the link manually. Hard-failing here meant trainings
+    // could not be scheduled at all in fresh deploys without Google creds.
+    let googleMeetUrl: string | null = null;
+    let googleCalendarEventId: string | null = null;
+    let googleMeetWarning: string | null = null;
 
     if (deliveryType === "Online Live Session") {
-      console.log(">> Initiating Google Meet Auto-Generation...");
-      
-      const eventStart = new Date(`${eventDate}T${startTime}:00+03:00`);
-      const eventEnd = new Date(`${eventDate}T${endTime}:00+03:00`);
-      
-      const meetTitle = `[OzekiRead] ${title} - Live Session`;
-      const meetDescription = `Welcome to the OzekiRead Online Training Portal.\n\n${description}\n\nCategory: ${category}\nLevel: ${level}\n\nPlease join promptly at ${startTime}. This session may be recorded for the OzekiRead Library.`;
-
-      // Utilize existing Google Calendar lib
-      const gcal = await createGoogleCalendarEvent({
-        summary: meetTitle,
-        description: meetDescription,
-        startDateTime: eventStart.toISOString(),
-        endDateTime: eventEnd.toISOString(),
-        createMeet: true,
-      });
-      
-      if (gcal.meetLink) {
-        googleMeetUrl = gcal.meetLink;
-        googleCalendarEventId = gcal.eventId;
+      if (!isGoogleCalendarConfigured()) {
+        googleMeetWarning = "Google Calendar not configured — event saved without an auto-generated Meet link. Set GOOGLE_* env vars in Railway, or paste a Meet link manually after creation.";
+        logger.warn("[scheduler/create] Google not configured — saving event without Meet link", { eventCode });
       } else {
-        throw new Error("Failed to generate Google Meet URL from integration layer.");
+        logger.info("[scheduler/create] generating Google Meet link", { eventCode });
+        const eventStart = new Date(`${eventDate}T${startTime}:00+03:00`);
+        const eventEnd = new Date(`${eventDate}T${endTime}:00+03:00`);
+        const meetTitle = `[OzekiRead] ${title} - Live Session`;
+        const meetDescription = `Welcome to the OzekiRead Online Training Portal.\n\n${description}\n\nCategory: ${category}\nLevel: ${level}\n\nPlease join promptly at ${startTime}. This session may be recorded for the OzekiRead Library.`;
+
+        try {
+          const gcal = await createGoogleCalendarEvent({
+            summary: meetTitle,
+            description: meetDescription,
+            startDateTime: eventStart.toISOString(),
+            endDateTime: eventEnd.toISOString(),
+            createMeet: true,
+          });
+          if (gcal.meetLink) {
+            googleMeetUrl = gcal.meetLink;
+            googleCalendarEventId = gcal.eventId;
+          } else {
+            googleMeetWarning = "Google Calendar accepted the event but did not return a Meet link — the create-meet flag may not be honoured by the calendar. Paste a Meet link manually.";
+            logger.warn("[scheduler/create] Calendar event created without Meet link", { eventCode, eventId: gcal.eventId });
+          }
+        } catch (gcalErr) {
+          googleMeetWarning = `Google Calendar API failed; event saved without a Meet link. Operator action required: ${gcalErr instanceof Error ? gcalErr.message : String(gcalErr)}`;
+          logger.error("[scheduler/create] Google Calendar API failed; degrading", { error: gcalErr instanceof Error ? gcalErr.message : String(gcalErr) });
+        }
       }
     }
 
@@ -90,17 +108,15 @@ export async function POST(request: Request) {
       ]
     );
 
-    await queryPostgres('COMMIT');
-
-    return NextResponse.json({ 
-      success: true, 
-      message: "Event Scheduled and Provisioned",
-      event: result.rows[0]
+    return NextResponse.json({
+      success: true,
+      message: googleMeetWarning ? "Event scheduled (Google integration degraded)" : "Event Scheduled and Provisioned",
+      event: result.rows[0],
+      googleMeetWarning,
     });
 
   } catch (_err) {
-    await queryPostgres('ROLLBACK');
-    console.error("Scheduler Creation Error:", _err);
+    logger.error("Scheduler Creation Error", { error: _err instanceof Error ? _err.message : String(_err) });
     return NextResponse.json({ message: "Scheduler Pipeline Failure" }, { status: 500 });
   }
 }

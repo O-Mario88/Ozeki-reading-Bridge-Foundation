@@ -18,7 +18,7 @@ import { logger } from "@/lib/logger";
  */
 
 export type EmisRunResult = {
-  status: "success" | "partial" | "failed" | "mock";
+  status: "success" | "partial" | "failed" | "mock" | "disabled";
   schoolsIn: number;
   teachersIn: number;
   outcomesOut: number;
@@ -27,10 +27,30 @@ export type EmisRunResult = {
   runId: number;
 };
 
+function isEmisEnabled(): boolean {
+  // EMIS is opt-in. Clients without an EMIS MoU set EMIS_ENABLED=false (or
+  // leave it unset) and the integration becomes a no-op — cron skips, the
+  // manual sync button reports "disabled", and the portal page hides
+  // controls. Flip to "true" only after the MoU + API credentials land.
+  return process.env.EMIS_ENABLED === "true";
+}
+
 function getEmisCredentials() {
   const baseUrl = process.env.EMIS_API_BASE_URL?.trim() ?? "";
   const token = process.env.EMIS_API_TOKEN?.trim() ?? "";
   return { baseUrl, token, configured: Boolean(baseUrl && token) };
+}
+
+function disabledResult(direction: "pull" | "push"): EmisRunResult {
+  return {
+    status: "disabled",
+    schoolsIn: 0,
+    teachersIn: 0,
+    outcomesOut: 0,
+    errors: 0,
+    summary: `EMIS integration is disabled (EMIS_ENABLED!=true). Skipping ${direction}.`,
+    runId: 0,
+  };
 }
 
 async function recordRun(input: {
@@ -75,6 +95,10 @@ async function recordRun(input: {
 }
 
 export async function pullEmisRoster(trigger: "manual" | "cron" | "startup"): Promise<EmisRunResult> {
+  if (!isEmisEnabled()) {
+    logger.info("[emis] pull skipped — integration disabled");
+    return disabledResult("pull");
+  }
   const creds = getEmisCredentials();
   if (!creds.configured) {
     const schools = await queryPostgres<{ n: number }>(
@@ -113,6 +137,10 @@ export async function pullEmisRoster(trigger: "manual" | "cron" | "startup"): Pr
 }
 
 export async function pushOutcomesToEmis(trigger: "manual" | "cron" | "startup"): Promise<EmisRunResult> {
+  if (!isEmisEnabled()) {
+    logger.info("[emis] push skipped — integration disabled");
+    return disabledResult("push");
+  }
   const creds = getEmisCredentials();
   const candidates = await queryPostgres<{ n: number }>(
     `SELECT COUNT(*)::int AS n FROM assessment_records WHERE assessment_date > NOW() - INTERVAL '90 days'`,
@@ -191,7 +219,7 @@ export async function getEmisStatus(): Promise<{
   const row = config.rows[0];
   const creds = getEmisCredentials();
   return {
-    enabled: Boolean(row?.enabled),
+    enabled: Boolean(row?.enabled) && isEmisEnabled(),
     configured: creds.configured,
     pullFrequencyMinutes: Number(row?.pull_frequency_minutes ?? 1440),
     lastPullAt: row?.last_pull_at ?? null,

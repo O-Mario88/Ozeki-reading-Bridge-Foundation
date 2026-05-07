@@ -17,13 +17,20 @@ export default async function EmisIntegrationPage() {
 
   return (
     <PortalShell user={user} activeHref="/portal/integrations/emis" title="Uganda EMIS sync" description="Pulls school + teacher roster from EMIS; pushes Ozeki learning outcomes back. Status below.">
+      {!status.enabled ? (
+        <section className="rounded-2xl bg-amber-50 border border-amber-200 p-6 mb-6">
+          <h3 className="text-sm font-bold text-amber-900 uppercase tracking-wider mb-1">Integration disabled</h3>
+          <p className="text-sm text-amber-800">EMIS sync is opt-in. Set <code className="px-1 py-0.5 bg-amber-100 rounded">EMIS_ENABLED=true</code> in the deployment environment, populate <code className="px-1 py-0.5 bg-amber-100 rounded">EMIS_API_BASE_URL</code> and <code className="px-1 py-0.5 bg-amber-100 rounded">EMIS_API_TOKEN</code>, and the sync becomes live. While disabled, the cron is a no-op and manual triggers are skipped.</p>
+        </section>
+      ) : null}
+
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <Card label="Adapter status" value={status.configured ? "Configured" : "Mock mode"} ok={status.configured} hint={status.configured ? "EMIS credentials present" : "Set EMIS_API_BASE_URL and EMIS_API_TOKEN to enable real syncs."} />
         <Card label="Last pull" value={status.lastPullAt ? new Date(status.lastPullAt).toLocaleString() : "Never"} ok={Boolean(status.lastPullAt)} hint={`Frequency: every ${status.pullFrequencyMinutes} min`} />
         <Card label="Schools linked" value={String(status.schoolsLinked)} ok={status.schoolsLinked > 0} hint="Ozeki schools mapped to an EMIS school code" />
       </section>
 
-      <EmisSyncControls />
+      {status.enabled ? <EmisSyncControls /> : null}
 
       <section className="rounded-2xl bg-white border border-gray-100 overflow-hidden mt-6">
         <header className="px-5 py-4 border-b border-gray-100">
@@ -55,7 +62,8 @@ export default async function EmisIntegrationPage() {
                     r.status === "success" ? "bg-emerald-50 text-emerald-700"
                       : r.status === "mock" ? "bg-amber-50 text-amber-700"
                         : r.status === "partial" ? "bg-yellow-50 text-yellow-700"
-                          : "bg-red-50 text-red-700"
+                          : r.status === "disabled" ? "bg-gray-100 text-gray-600"
+                            : "bg-red-50 text-red-700"
                   }`}>{r.status}</span>
                 </td>
                 <td className="px-4 py-2.5 text-xs text-gray-700 text-right">{r.schoolsIn}</td>
