@@ -33,8 +33,8 @@ export default async function ParishPage({ params }: { params: Params }) {
     const districtName = parts[0] || name;
 
     const drilldown = await getImpactDrilldownData("parish", name);
-    const fidelity = await calculateFidelityScore("district", districtName); // Fallback to district for now
-    const gains = await getLearningGainsData("district", districtName);
+    const fidelity = await calculateFidelityScore("parish", name);
+    const gains = await getLearningGainsData("parish", name);
 
     return (
         <>

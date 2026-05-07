@@ -30,8 +30,8 @@ export default async function SubCountyPage({ params }: { params: Params }) {
     const districtName = name.split("::")[0] || name;
 
     const drilldown = await getImpactDrilldownData("sub_county", name);
-    const fidelity = await calculateFidelityScore("district", districtName); // Fallback to district for now
-    const gains = await getLearningGainsData("district", districtName);
+    const fidelity = await calculateFidelityScore("sub_county", name);
+    const gains = await getLearningGainsData("sub_county", name);
 
     return (
         <>

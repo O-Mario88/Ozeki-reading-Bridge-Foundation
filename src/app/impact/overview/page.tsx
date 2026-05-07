@@ -25,7 +25,18 @@ async function getLiveImpactKpis() {
   try {
     const [schools, teachers, learners, visits, trainings, assessments] = await Promise.all([
       queryPostgres(`SELECT COUNT(*)::int AS c FROM schools_directory`),
-      queryPostgres(`SELECT COUNT(DISTINCT teacher_uid)::int AS c FROM teacher_roster`),
+      // "Teachers Trained" should count distinct teachers who actually
+      // attended a training session, not every teacher in the directory.
+      // Falls back to the directory count if the attendance table is
+      // empty / missing on a partially-bootstrapped DB.
+      queryPostgres(`
+        SELECT COALESCE(
+          (SELECT COUNT(DISTINCT teacher_uid)::int
+           FROM portal_training_attendance
+           WHERE attended = TRUE AND teacher_uid IS NOT NULL),
+          (SELECT COUNT(DISTINCT teacher_uid)::int FROM teacher_roster)
+        ) AS c
+      `).catch(() => ({ rows: [{ c: 0 }] })),
       queryPostgres(`SELECT COALESCE(SUM(direct_impact_total), 0)::int AS c FROM impact_public_school_scope`),
       queryPostgres(`SELECT COUNT(*)::int AS c FROM portal_records WHERE module = 'visit'`),
       queryPostgres(`SELECT COUNT(*)::int AS c FROM portal_records WHERE module = 'training'`),

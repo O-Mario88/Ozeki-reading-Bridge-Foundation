@@ -12,7 +12,11 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function TestimonialsPage() {
-  const dbItems = await listImpactGalleryEntriesPostgres(12);
+  // Wrap the gallery query — without try/catch the page hard-500s when
+  // the impact_gallery_entries table is empty / missing on a partially-
+  // bootstrapped DB. Falls back to the static `testimonials` content
+  // below so the page still renders something useful.
+  const dbItems = await listImpactGalleryEntriesPostgres(12).catch(() => []);
   const items = dbItems.map((record) => {
     return {
       id: String(record.id),
@@ -46,7 +50,21 @@ export default async function TestimonialsPage() {
               <h2 className="tpd-page-title">Testimonial wall with photos and videos</h2>
             </div>
           </div>
-          <MediaTestimonialGrid items={items} />
+          {items.length > 0 ? (
+            <MediaTestimonialGrid items={items} />
+          ) : (
+            <div style={{
+              padding: "3rem 1.5rem",
+              textAlign: "center",
+              borderRadius: 16,
+              background: "#F8FAFC",
+              color: "#475467",
+              fontSize: 14,
+            }}>
+              Photo + video testimonials will appear here as schools share their stories.
+              Static teacher quotes below are sourced from previously published reports.
+            </div>
+          )}
         </div>
       </section>
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requirePortalStaffUser } from "@/lib/auth";
-import { listSchoolDirectoryRecordsPostgres } from "@/lib/server/postgres/repositories/schools";
+import { queryPostgres } from "@/lib/server/postgres/client";
 import {
   getSchoolsOverviewKpis,
   listRecentSchoolVisits,
@@ -104,14 +104,20 @@ export default async function SchoolsOverviewPage() {
   try { liveFunnel = await getImplementationFunnel(); }
   catch (e) { logger.warn("[schools/overview] funnel failed", { error: String(e) }); }
 
-  /* Schools-reached / active still derived from the directory list as a
-     belt-and-braces redundancy in case the aggregate query fails. */
+  /* Schools-reached / active still derived from the directory as a
+     belt-and-braces redundancy in case the aggregate query fails.
+     Previously pulled the whole directory list just to compute .length
+     and .filter().length — replaced with two SQL COUNTs. */
   let directoryCount = 0;
   let activeFromDirectory = 0;
   try {
-    const all = await listSchoolDirectoryRecordsPostgres();
-    directoryCount = all.length;
-    activeFromDirectory = all.filter((s) => s.schoolActive === true).length || all.length;
+    const counts = await queryPostgres<{ total: string; active: string }>(
+      `SELECT COUNT(*)::text AS total,
+              COUNT(*) FILTER (WHERE school_active IS TRUE)::text AS active
+       FROM schools_directory`,
+    );
+    directoryCount = Number(counts.rows[0]?.total ?? 0);
+    activeFromDirectory = Number(counts.rows[0]?.active ?? 0) || directoryCount;
   } catch (e) {
     logger.error("[schools/overview] directory list fallback", { error: String(e) });
   }
@@ -200,13 +206,16 @@ export default async function SchoolsOverviewPage() {
 
         {/* KPI strip — 7 cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7 gap-3">
-          <SchoolsKpi label="SCHOOLS REACHED" value={schoolsReached.toLocaleString()} delta={FALLBACK.schoolsReachedDelta} icon={SchoolIcon} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#066a67" />
-          <SchoolsKpi label="ACTIVE SCHOOLS" value={activeSchools.toLocaleString()} delta={FALLBACK.activeSchoolsDelta} icon={Building2} cardBg="#eff6ff" borderColor="#bfdbfe" iconBg="#dbeafe" iconColor="#1d4ed8" />
-          <SchoolsKpi label="TEACHERS EVALUATED" value={teachersEvaluated.toLocaleString()} delta={FALLBACK.teachersEvaluatedDelta} icon={Users} cardBg="#faf5ff" borderColor="#e9d5ff" iconBg="#f3e8ff" iconColor="#7c3aed" />
-          <SchoolsKpi label="ASSESSMENTS COMPLETED" value={assessmentsDone.toLocaleString()} delta={FALLBACK.assessmentsCompletedDelta} icon={ClipboardCheck} cardBg="#fff7ed" borderColor="#fed7aa" iconBg="#ffedd5" iconColor="#c2410c" />
-          <SchoolsKpi label="COACHING VISITS" value={coachingVisits.toLocaleString()} delta={FALLBACK.coachingVisitsDelta} icon={MapPin} cardBg="#eff6ff" borderColor="#bfdbfe" iconBg="#dbeafe" iconColor="#1d4ed8" />
-          <SchoolsKpi label="STORY ACTIVITIES" value={storyActivities.toLocaleString()} delta={FALLBACK.storyActivitiesDelta} icon={BookOpen} cardBg="#fef2f2" borderColor="#fecaca" iconBg="#fee2e2" iconColor="#b91c1c" />
-          <SchoolsKpi label="DATA QUALITY" value={`${dataQuality}%`} delta={FALLBACK.dataQualityDelta} icon={ShieldCheck} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#066a67" className="col-span-2 sm:col-span-3 lg:col-span-4 2xl:col-span-1" />
+          {/* Deltas pass null until the dashboard repo computes real
+              month-over-month change. Stops the page from rendering fake
+              "vs last month +X%" labels next to live current values. */}
+          <SchoolsKpi label="SCHOOLS REACHED" value={schoolsReached.toLocaleString()} delta={null} icon={SchoolIcon} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#066a67" />
+          <SchoolsKpi label="ACTIVE SCHOOLS" value={activeSchools.toLocaleString()} delta={null} icon={Building2} cardBg="#eff6ff" borderColor="#bfdbfe" iconBg="#dbeafe" iconColor="#1d4ed8" />
+          <SchoolsKpi label="TEACHERS EVALUATED" value={teachersEvaluated.toLocaleString()} delta={null} icon={Users} cardBg="#faf5ff" borderColor="#e9d5ff" iconBg="#f3e8ff" iconColor="#7c3aed" />
+          <SchoolsKpi label="ASSESSMENTS COMPLETED" value={assessmentsDone.toLocaleString()} delta={null} icon={ClipboardCheck} cardBg="#fff7ed" borderColor="#fed7aa" iconBg="#ffedd5" iconColor="#c2410c" />
+          <SchoolsKpi label="COACHING VISITS" value={coachingVisits.toLocaleString()} delta={null} icon={MapPin} cardBg="#eff6ff" borderColor="#bfdbfe" iconBg="#dbeafe" iconColor="#1d4ed8" />
+          <SchoolsKpi label="STORY ACTIVITIES" value={storyActivities.toLocaleString()} delta={null} icon={BookOpen} cardBg="#fef2f2" borderColor="#fecaca" iconBg="#fee2e2" iconColor="#b91c1c" />
+          <SchoolsKpi label="DATA QUALITY" value={`${dataQuality}%`} delta={null} icon={ShieldCheck} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#066a67" className="col-span-2 sm:col-span-3 lg:col-span-4 2xl:col-span-1" />
         </div>
 
         {/* Analytics row — 4 cards */}
@@ -456,7 +465,7 @@ export default async function SchoolsOverviewPage() {
 function SchoolsKpi({
   label, value, delta, icon: Icon, cardBg, borderColor, iconBg, iconColor, className = "",
 }: {
-  label: string; value: string; delta: number; icon: LucideIcon;
+  label: string; value: string; delta?: number | null; icon: LucideIcon;
   cardBg: string; borderColor: string; iconBg: string; iconColor: string;
   className?: string;
 }) {
@@ -472,10 +481,16 @@ function SchoolsKpi({
         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-tight truncate">{label}</p>
       </div>
       <p className="text-[24px] lg:text-[26px] font-extrabold text-gray-900 leading-none tracking-tight truncate">{value}</p>
-      <p className="text-[11px] text-[#066a67] font-semibold mt-auto inline-flex items-center gap-0.5">
-        <ArrowUpRight className="h-3 w-3" strokeWidth={2} />
-        {delta}% <span className="text-gray-500 font-medium ml-0.5">vs last month</span>
-      </p>
+      {/* Only render the "vs last month" delta when caller actually has one.
+          Previous version hard-required a number and rendered fake FALLBACK
+          deltas with a green up-arrow even when no real change had been
+          computed — visibly misleading. */}
+      {delta != null ? (
+        <p className="text-[11px] text-[#066a67] font-semibold mt-auto inline-flex items-center gap-0.5">
+          <ArrowUpRight className="h-3 w-3" strokeWidth={2} />
+          {delta}% <span className="text-gray-500 font-medium ml-0.5">vs last month</span>
+        </p>
+      ) : null}
     </div>
   );
 }

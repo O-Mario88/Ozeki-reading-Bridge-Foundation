@@ -172,8 +172,12 @@ export default async function GovernmentViewPage() {
                                         <th style={{ padding: "0.6rem 0.5rem" }}>#</th>
                                         <th style={{ padding: "0.6rem 0.5rem" }}>District</th>
                                         <th style={{ padding: "0.6rem 0.5rem" }}>Region</th>
-                                        <th style={{ padding: "0.6rem 0.5rem", textAlign: "right" }}>Fidelity</th>
-                                        <th style={{ padding: "0.6rem 0.5rem", textAlign: "right" }}>Outcomes</th>
+                                        <th style={{ padding: "0.6rem 0.5rem", textAlign: "right" }} title="Composite of training, coaching visits, assessments, and story activity per school. 0–100. Not a fidelity rubric.">
+                                            Activity
+                                        </th>
+                                        <th style={{ padding: "0.6rem 0.5rem", textAlign: "right" }} title="Share of enrolled learners who have at least one assessment record. Not a baseline-to-endline delta.">
+                                            Assessment Coverage
+                                        </th>
                                         <th style={{ padding: "0.6rem 0.5rem", textAlign: "right" }}>Schools</th>
                                         <th style={{ padding: "0.6rem 0.5rem", textAlign: "right" }}>Learners</th>
                                         <th style={{ padding: "0.6rem 0.5rem", textAlign: "center" }}>Status</th>
@@ -207,8 +211,8 @@ export default async function GovernmentViewPage() {
                                             </td>
                                             <td style={{ padding: "0.5rem", textAlign: "right" }}>
                                                 {row.outcomesScore !== null ? (
-                                                    <span style={{ color: row.outcomesScore > 0 ? "#ff7235" : "#dc2626", fontWeight: 600 }}>
-                                                        {row.outcomesScore > 0 ? "+" : ""}{row.outcomesScore.toFixed(1)}pp
+                                                    <span style={{ color: row.outcomesScore >= 50 ? "#066A67" : "#dc2626", fontWeight: 600 }}>
+                                                        {row.outcomesScore.toFixed(0)}%
                                                     </span>
                                                 ) : "—"}
                                             </td>

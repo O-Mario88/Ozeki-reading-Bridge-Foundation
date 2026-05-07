@@ -11,7 +11,10 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function MediaPage() {
-  const dbItems = await listImpactGalleryEntriesPostgres(24);
+  // Wrap the gallery query — without try/catch the page hard-500s when
+  // the impact_gallery_entries table is missing on a partially-bootstrapped
+  // DB. Empty result renders the empty-state card below.
+  const dbItems = await listImpactGalleryEntriesPostgres(24).catch(() => []);
   const items = dbItems.map((record) => {
     return {
       id: String(record.id),
@@ -50,7 +53,24 @@ export default async function MediaPage() {
             </div>
           </div>
 
-          <MediaTestimonialGrid items={items} />
+          {items.length > 0 ? (
+            <MediaTestimonialGrid items={items} />
+          ) : (
+            <div style={{
+              padding: "3rem 1.5rem",
+              textAlign: "center",
+              borderRadius: 16,
+              background: "#F8FAFC",
+              color: "#475467",
+              fontSize: 14,
+              lineHeight: 1.6,
+            }}>
+              The media wall populates from school-visit photos and short
+              testimonial videos as field staff upload them. Items will appear
+              here automatically — see the capture guidance below for what to
+              record at each session.
+            </div>
+          )}
 
           <div className="action-row">
             <Link className="button" href="/testimonials">

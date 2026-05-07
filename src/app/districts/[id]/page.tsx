@@ -81,7 +81,7 @@ export default async function DistrictPage({ params }: { params: Params }) {
                                 "--kpi-accent": kpis.improvementIndex > 0 ? "#ff7235" : "#dc2626",
                             } as React.CSSProperties}>
                                 <div className="impact-dash-kpi-body">
-                                    <span className="impact-dash-kpi-label">Improvement Index</span>
+                                    <span className="impact-dash-kpi-label" title="Change in teaching-practice score from baseline to endline coaching observation, in percentage points.">Teaching Practice Δ</span>
                                     <span className="impact-dash-kpi-value">
                                         {kpis.improvementIndex > 0 ? "+" : ""}{kpis.improvementIndex.toFixed(1)}pp
                                     </span>

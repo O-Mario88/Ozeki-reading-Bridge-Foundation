@@ -667,6 +667,64 @@ export async function getPublicTeachingQualityImprovementPostgres(): Promise<Tea
   }
 }
 
+/**
+ * KPIs for the /portal/observations list page. Computes total / this-month
+ * count / distinct teachers observed (with whitespace + case normalisation,
+ * since teacher_name is free text on this table) / average rating in SQL
+ * across the *whole* table — instead of the previous approach which pulled
+ * the first 200 rows into JS and computed average over only that sample,
+ * biasing the KPI as the table grew.
+ *
+ * The avg rating maps the three textual buckets to numeric scores:
+ *   fidelity → 100, partial → 50, low → 0
+ */
+export async function getObservationsListKpisPostgres(filter: { createdByUserId?: number } = {}): Promise<{
+  total: number;
+  thisMonth: number;
+  teachersObserved: number;
+  avgScore: number | null;
+}> {
+  const where: string[] = [`status <> 'archived'`];
+  const params: unknown[] = [];
+  if (filter.createdByUserId !== undefined) {
+    params.push(filter.createdByUserId);
+    where.push(`created_by_user_id = $${params.length}`);
+  }
+  const whereClause = `WHERE ${where.join(' AND ')}`;
+
+  const res = await queryPostgres<{
+    total: string;
+    this_month: string;
+    teachers_observed: string;
+    avg_score: string | null;
+  }>(
+    `SELECT
+       COUNT(*)::text                                                                  AS total,
+       COUNT(*) FILTER (WHERE date_trunc('month', observation_date) = date_trunc('month', CURRENT_DATE))::text AS this_month,
+       COUNT(DISTINCT lower(regexp_replace(btrim(teacher_name), '\\s+', ' ', 'g')))
+         FILTER (WHERE teacher_name IS NOT NULL AND btrim(teacher_name) <> '')::text   AS teachers_observed,
+       AVG(
+         CASE overall_post_observation_rating
+           WHEN 'fidelity' THEN 100
+           WHEN 'partial'  THEN 50
+           WHEN 'low'      THEN 0
+           ELSE NULL
+         END
+       )::text                                                                          AS avg_score
+     FROM teacher_lesson_observations
+     ${whereClause}`,
+    params,
+  ).catch(() => ({ rows: [{ total: "0", this_month: "0", teachers_observed: "0", avg_score: null }] }));
+
+  const row = res.rows[0] ?? { total: "0", this_month: "0", teachers_observed: "0", avg_score: null };
+  return {
+    total: Number(row.total ?? 0),
+    thisMonth: Number(row.this_month ?? 0),
+    teachersObserved: Number(row.teachers_observed ?? 0),
+    avgScore: row.avg_score == null ? null : Number(row.avg_score),
+  };
+}
+
 export async function getObservationDashboardStatsPostgres(): Promise<{
   total: number;
   submitted: number;

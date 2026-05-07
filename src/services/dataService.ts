@@ -209,34 +209,63 @@ export type FidelityDriver = {
     detail: string;
 };
 
+// Build a scope filter for queries against tables that JOIN to schools_directory.
+// sub_county and parish scopes are encoded as composite ids like
+// "District::SubCounty" / "District::SubCounty::Parish" by the page routes.
+// Returns the WHERE clause + the parameters list to pass to pg.
+function buildSchoolScopeFilter(scopeType: string, scopeId: string): { where: string; params: unknown[] } {
+    if (scopeType === 'school') return { where: `WHERE school_id = $1::int`, params: [scopeId] };
+    if (scopeType === 'district') return { where: `WHERE district = $1`, params: [scopeId] };
+    if (scopeType === 'region') return { where: `WHERE district IN (SELECT DISTINCT district FROM schools_directory WHERE region = $1)`, params: [scopeId] };
+    if (scopeType === 'sub_county') {
+        const [district, subCounty] = scopeId.split('::');
+        if (district && subCounty) {
+            return {
+                where: `WHERE school_id IN (SELECT id FROM schools_directory WHERE district = $1 AND sub_county = $2)`,
+                params: [district, subCounty],
+            };
+        }
+    }
+    if (scopeType === 'parish') {
+        const [district, subCounty, parish] = scopeId.split('::');
+        if (district && subCounty && parish) {
+            return {
+                where: `WHERE school_id IN (SELECT id FROM schools_directory WHERE district = $1 AND sub_county = $2 AND parish = $3)`,
+                params: [district, subCounty, parish],
+            };
+        }
+    }
+    return { where: '', params: [] };
+}
+
+function buildSchoolsDirectoryScopeFilter(scopeType: string, scopeId: string): { where: string; params: unknown[] } {
+    if (scopeType === 'school') return { where: `WHERE id = $1::int`, params: [scopeId] };
+    if (scopeType === 'district') return { where: `WHERE district = $1`, params: [scopeId] };
+    if (scopeType === 'region') return { where: `WHERE region = $1`, params: [scopeId] };
+    if (scopeType === 'sub_county') {
+        const [district, subCounty] = scopeId.split('::');
+        if (district && subCounty) return { where: `WHERE district = $1 AND sub_county = $2`, params: [district, subCounty] };
+    }
+    if (scopeType === 'parish') {
+        const [district, subCounty, parish] = scopeId.split('::');
+        if (district && subCounty && parish) return { where: `WHERE district = $1 AND sub_county = $2 AND parish = $3`, params: [district, subCounty, parish] };
+    }
+    return { where: '', params: [] };
+}
+
 export async function calculateFidelityScore(scopeType: string, scopeId: string) {
-    const scopeFilter = scopeType === 'district'
-        ? `WHERE district = $1`
-        : scopeType === 'school'
-        ? `WHERE school_id = $1::int`
-        : scopeType === 'region'
-        ? `WHERE district IN (SELECT DISTINCT district FROM schools_directory WHERE region = $1)`
-        : '';
+    const portalScope = buildSchoolScopeFilter(scopeType, scopeId);
+    const directoryScope = buildSchoolsDirectoryScopeFilter(scopeType, scopeId);
 
     const [activityRows, schoolRows] = await Promise.all([
-        scopeFilter
-            ? queryPostgres(`
-                SELECT
-                    COUNT(*) FILTER (WHERE module = 'training')::int                             AS trainings,
-                    COUNT(*) FILTER (WHERE module = 'visit')::int                                AS visits,
-                    COUNT(*) FILTER (WHERE module = 'assessment')::int                           AS assessments,
-                    COUNT(*) FILTER (WHERE module IN ('story_activity','story'))::int             AS story_activities
-                FROM portal_records ${scopeFilter}`, [scopeId])
-            : queryPostgres(`
-                SELECT
-                    COUNT(*) FILTER (WHERE module = 'training')::int  AS trainings,
-                    COUNT(*) FILTER (WHERE module = 'visit')::int     AS visits,
-                    COUNT(*) FILTER (WHERE module = 'assessment')::int AS assessments,
-                    COUNT(*) FILTER (WHERE module IN ('story_activity','story'))::int AS story_activities
-                FROM portal_records`),
-        scopeFilter
-            ? queryPostgres(`SELECT COUNT(*)::int AS school_count FROM schools_directory ${scopeFilter}`, [scopeId])
-            : queryPostgres(`SELECT COUNT(*)::int AS school_count FROM schools_directory`),
+        queryPostgres(`
+            SELECT
+                COUNT(*) FILTER (WHERE module = 'training')::int                             AS trainings,
+                COUNT(*) FILTER (WHERE module = 'visit')::int                                AS visits,
+                COUNT(*) FILTER (WHERE module = 'assessment')::int                           AS assessments,
+                COUNT(*) FILTER (WHERE module IN ('story_activity','story'))::int             AS story_activities
+            FROM portal_records ${portalScope.where}`, portalScope.params),
+        queryPostgres(`SELECT COUNT(*)::int AS school_count FROM schools_directory ${directoryScope.where}`, directoryScope.params),
     ]);
 
     const act = activityRows.rows[0] as Record<string, unknown> ?? {};
@@ -273,15 +302,41 @@ export type LearningDomain = {
 };
 
 export async function getLearningGainsData(scopeType: string, scopeId: string) {
-    const joinFilter = scopeType === 'district'
-        ? `JOIN schools_directory sd ON sd.id = ar.school_id WHERE sd.district = $1`
-        : scopeType === 'school'
-        ? `JOIN schools_directory sd ON sd.id = ar.school_id WHERE ar.school_id = $1::int`
-        : scopeType === 'region'
-        ? `JOIN schools_directory sd ON sd.id = ar.school_id WHERE sd.region = $1`
-        : `JOIN schools_directory sd ON sd.id = ar.school_id`;
-
-    const params = joinFilter.includes('$1') ? [scopeId] : [];
+    // Build the JOIN + WHERE for assessment_records → schools_directory based on
+    // the scope. sub_county and parish scopes are composite ids decoded here.
+    let joinFilter: string;
+    let params: unknown[];
+    if (scopeType === 'school') {
+        joinFilter = `JOIN schools_directory sd ON sd.id = ar.school_id WHERE ar.school_id = $1::int`;
+        params = [scopeId];
+    } else if (scopeType === 'district') {
+        joinFilter = `JOIN schools_directory sd ON sd.id = ar.school_id WHERE sd.district = $1`;
+        params = [scopeId];
+    } else if (scopeType === 'region') {
+        joinFilter = `JOIN schools_directory sd ON sd.id = ar.school_id WHERE sd.region = $1`;
+        params = [scopeId];
+    } else if (scopeType === 'sub_county') {
+        const [district, subCounty] = scopeId.split('::');
+        if (district && subCounty) {
+            joinFilter = `JOIN schools_directory sd ON sd.id = ar.school_id WHERE sd.district = $1 AND sd.sub_county = $2`;
+            params = [district, subCounty];
+        } else {
+            joinFilter = `JOIN schools_directory sd ON sd.id = ar.school_id`;
+            params = [];
+        }
+    } else if (scopeType === 'parish') {
+        const [district, subCounty, parish] = scopeId.split('::');
+        if (district && subCounty && parish) {
+            joinFilter = `JOIN schools_directory sd ON sd.id = ar.school_id WHERE sd.district = $1 AND sd.sub_county = $2 AND sd.parish = $3`;
+            params = [district, subCounty, parish];
+        } else {
+            joinFilter = `JOIN schools_directory sd ON sd.id = ar.school_id`;
+            params = [];
+        }
+    } else {
+        joinFilter = `JOIN schools_directory sd ON sd.id = ar.school_id`;
+        params = [];
+    }
 
     const result = await queryPostgres(`
         SELECT

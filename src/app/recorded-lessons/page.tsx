@@ -59,31 +59,11 @@ export default async function RecordedLessonsIndex() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 lg:px-12 py-16">
-        
-        {/* Premium Tools Row */}
-        <div className="flex flex-col md:flex-row gap-4 mb-12 justify-between items-center">
-          <div className="w-full md:w-96 relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-            <input 
-              type="text" 
-              placeholder="Search by title, level, or topic..." 
-              className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent transition-all"
-            />
-          </div>
-          <div className="flex gap-2 self-start md:self-auto">
-            <select className="py-3 px-4 rounded-xl border border-slate-200 bg-white shadow-sm font-medium focus:ring-2 focus:ring-emerald-600">
-              <option>All Levels</option>
-              <option>Primary 1</option>
-              <option>Primary 2</option>
-              <option>Leadership</option>
-            </select>
-            <select className="py-3 px-4 rounded-xl border border-slate-200 bg-white shadow-sm font-medium focus:ring-2 focus:ring-emerald-600">
-              <option>Most Recent</option>
-              <option>Highest Rated</option>
-              <option>Most Viewed</option>
-            </select>
-          </div>
-        </div>
+
+        {/* Note: search + filter UI removed until backed by a client
+            component with state. Previously rendered static inputs that
+            looked interactive but had no handlers. Re-introduce when
+            LMS-side filtering ships. */}
 
         {/* LMS Grid System */}
         {lessons.length === 0 ? (

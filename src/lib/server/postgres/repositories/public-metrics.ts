@@ -531,10 +531,18 @@ export async function getPublicTeacherImpactSnapshot(): Promise<TeacherImpactSna
        JOIN portal_records pr ON pr.id = pta.portal_record_id`,
     ).catch(() => ({ rows: [{ trained_total: "0", trained_90d: "0" }] })),
     queryPostgres<{ observed_total: string; obs_90d: string }>(
+      // teacher_lesson_observations stores teacher_name as free text — there
+      // is no FK column. Distinct count of raw names inflates whenever a
+      // coach types the same teacher inconsistently (whitespace, casing).
+      // Normalize before COUNT DISTINCT: trim, collapse internal whitespace
+      // runs, lowercase. This is the closest we can get to a "real teacher
+      // count" without adding a teacher_uid FK on this table — schema
+      // migration tracked as Tier-2 work.
       `SELECT
-         COUNT(DISTINCT teacher_name)::int                                       AS observed_total,
+         COUNT(DISTINCT lower(regexp_replace(btrim(teacher_name), '\\s+', ' ', 'g')))::int  AS observed_total,
          COUNT(*) FILTER (WHERE observation_date >= CURRENT_DATE - INTERVAL '90 days')::int  AS obs_90d
-       FROM teacher_lesson_observations`,
+       FROM teacher_lesson_observations
+       WHERE teacher_name IS NOT NULL AND btrim(teacher_name) <> ''`,
     ).catch(() => ({ rows: [{ observed_total: "0", obs_90d: "0" }] })),
     queryPostgres<{ fidelity: string; partial: string; low: string; rated: string }>(
       `SELECT

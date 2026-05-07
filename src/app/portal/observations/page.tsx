@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { requirePortalUser } from "@/lib/auth";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { listObservationsPostgres } from "@/lib/server/postgres/repositories/phonics-observations";
+import { listObservationsPostgres, getObservationsListKpisPostgres } from "@/lib/server/postgres/repositories/phonics-observations";
 import {
   DashboardListCard, DashboardListHeader, DashboardListRow,
   StatusPill, AvatarCell, pillToneFor,
@@ -60,26 +60,24 @@ export default async function ObservationsListPage() {
   const user = await requirePortalUser();
   const isAdmin = user.isAdmin || user.isSuperAdmin;
 
-  const observations = await listObservationsPostgres({
-    createdByUserId: isAdmin ? undefined : user.id,
-    limit: 200,
-  });
+  const filterByUser = isAdmin ? undefined : user.id;
 
-  /* ── Aggregate KPIs ─────────────────────────────────────────────── */
-  const total = observations.length;
-  const now = new Date();
-  const thisMonth = observations.filter((o) => {
-    const d = new Date(o.observationDate);
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  }).length;
-  const teachersObserved = new Set(observations.map((o) => o.teacherName.trim().toLowerCase())).size;
-  const ratedScores = observations
-    .map((o) => ratingScore(o.overallPostObservationRating).value)
-    .filter((s) => s !== "—")
-    .map(Number);
-  const avgScore = ratedScores.length > 0
-    ? (ratedScores.reduce((a, b) => a + b, 0) / ratedScores.length).toFixed(1)
-    : "—";
+  // KPIs computed in SQL across the whole table — previously this list did
+  // limit:200 then aggregated in JS, biasing avg score / teachersObserved
+  // as the table grew. Page render below still pulls a paginated 200-row
+  // ledger, but headline numbers are now correct.
+  const [observations, kpis] = await Promise.all([
+    listObservationsPostgres({
+      createdByUserId: filterByUser,
+      limit: 200,
+    }),
+    getObservationsListKpisPostgres({ createdByUserId: filterByUser }),
+  ]);
+
+  const total = kpis.total;
+  const thisMonth = kpis.thisMonth;
+  const teachersObserved = kpis.teachersObserved;
+  const avgScore = kpis.avgScore == null ? "—" : kpis.avgScore.toFixed(1);
 
   const recent = observations.slice(0, 5);
 
