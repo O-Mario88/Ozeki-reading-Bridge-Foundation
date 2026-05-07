@@ -86,6 +86,20 @@ BEGIN
     RETURN;
   END IF;
 
+  -- The trigger function references payment_status, sponsorship_type,
+  -- amount, etc. — columns the legacy /api/migrate/sponsorships endpoint
+  -- does not create. Production DBs have these columns extended manually;
+  -- fresh Railway DBs that only ran the legacy endpoint do not. Skip the
+  -- function + trigger if the rich schema isn't there. The canonical
+  -- migration that adds them is tracked as Tier-2 tech debt.
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'sponsorships' AND column_name = 'payment_status'
+  ) THEN
+    RAISE NOTICE '[0054] sponsorships table is the minimal /api/migrate/sponsorships variant (no payment_status column) — skipping auto_allocate function + trigger. Run a richer sponsorships migration to enable.';
+    RETURN;
+  END IF;
+
   EXECUTE $f$
     CREATE OR REPLACE FUNCTION auto_allocate_sponsorship(target_sponsorship_id INTEGER)
     RETURNS INTEGER AS $body$
