@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { z } from "zod";
-import { updateOnlineTrainingSessionOutcomesPostgres } from "@/lib/server/postgres/repositories/training";
+import {
+  getOnlineTrainingSessionPostgres,
+  updateOnlineTrainingSessionOutcomesPostgres,
+} from "@/lib/server/postgres/repositories/training";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -24,10 +27,27 @@ function parseEventId(value: string) {
 
 export async function GET(
   _request: Request,
-  _context: { params: Promise<{ id: string }> },
+  context: { params: Promise<{ id: string }> },
 ) {
-  // Simple pass-through not normally used, leaving implemented but stubbed to avoid complex mapping unless necessary
-  return NextResponse.json({ error: "Direct GET for individual sessions is deprecated." }, { status: 400 });
+  const user = await getAuthenticatedPortalUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { id } = await context.params;
+    const sessionId = parseEventId(id);
+    const session = await getOnlineTrainingSessionPostgres(sessionId);
+    if (!session) {
+      return NextResponse.json({ error: "Session not found." }, { status: 404 });
+    }
+    return NextResponse.json({ session });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Server error." },
+      { status: 400 },
+    );
+  }
 }
 
 export async function PATCH(

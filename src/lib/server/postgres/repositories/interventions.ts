@@ -493,6 +493,34 @@ export async function updateInterventionPlanRecord(
   ).catch(() => undefined);
 }
 
+export async function deleteInterventionPlanRecord(
+  actor: { id: number; fullName: string },
+  id: string,
+): Promise<{ deleted: boolean }> {
+  // Hard delete + explicit cascade. plan_id columns on
+  // intervention_plan_actions, intervention_evidence, intervention_activity
+  // have no FK constraints, so we clean them up manually to avoid orphans.
+  const exists = await queryPostgres<{ id: string }>(
+    `SELECT id FROM intervention_plans WHERE id = $1`,
+    [id],
+  );
+  if (exists.rows.length === 0) {
+    return { deleted: false };
+  }
+  await queryPostgres(`DELETE FROM intervention_plan_actions WHERE plan_id = $1`, [id]);
+  await queryPostgres(`DELETE FROM intervention_evidence    WHERE plan_id = $1`, [id]);
+  await queryPostgres(`DELETE FROM intervention_activity    WHERE plan_id = $1`, [id]);
+  await queryPostgres(`DELETE FROM intervention_plans       WHERE id = $1`, [id]);
+
+  await queryPostgres(
+    `INSERT INTO intervention_activity (plan_id, kind, message, actor_user_id, actor_name)
+     VALUES (NULL, 'deleted', $1, $2, $3)`,
+    [`Plan ${id} deleted`, String(actor.id), actor.fullName],
+  ).catch(() => undefined);
+
+  return { deleted: true };
+}
+
 /* ── Evidence list ─────────────────────────────────────────────────── */
 
 export async function listInterventionEvidence(limit = 5): Promise<InterventionEvidenceRow[]> {

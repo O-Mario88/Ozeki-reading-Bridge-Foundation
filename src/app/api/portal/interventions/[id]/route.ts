@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { canEnterData } from "@/lib/permissions";
-import { updateInterventionPlanRecord } from "@/lib/server/postgres/repositories/interventions";
+import {
+  deleteInterventionPlanRecord,
+  updateInterventionPlanRecord,
+} from "@/lib/server/postgres/repositories/interventions";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -81,6 +85,45 @@ export async function PATCH(
       schoolsCount: body.schoolsCount,
     },
   );
+
+  return NextResponse.json({ success: true });
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const user = await getAuthenticatedPortalUser();
+  if (!user) {
+    return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  }
+  // Delete is a more destructive action than edit — restrict to admin tiers.
+  if (!user.isSuperAdmin && !user.isAdmin) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+  }
+
+  const { id } = await params;
+  if (!id) {
+    return NextResponse.json({ error: "Plan id required." }, { status: 400 });
+  }
+
+  const result = await deleteInterventionPlanRecord(
+    { id: user.id, fullName: user.fullName },
+    id,
+  );
+
+  if (!result.deleted) {
+    return NextResponse.json({ error: "Plan not found." }, { status: 404 });
+  }
+
+  await auditLog({
+    actor: user,
+    action: "delete",
+    targetTable: "intervention_plans",
+    targetId: id,
+    detail: `Deleted intervention plan ${id}`,
+    request,
+  });
 
   return NextResponse.json({ success: true });
 }
