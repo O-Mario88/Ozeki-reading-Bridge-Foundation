@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { generateFinancialReportPdf } from "@/lib/server/pdf/finance-pdf-engine";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -101,7 +102,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (err: unknown) {
-    console.error("PDF generation failed:", err);
+    logger.error("PDF generation failed", { error: err instanceof Error ? err.message : String(err) });
     return new NextResponse("Internal Server Error generating PDF", { status: 500 });
   }
 }

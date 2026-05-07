@@ -10,6 +10,7 @@ import {
   buildLearningGainsFromAggregate,
   buildQualitySummaryFromAggregate,
 } from "@/lib/public-impact-views";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -113,7 +114,7 @@ export async function GET(request: Request) {
 
     return cachedJson(await getPublicImpactAggregate("country", "Uganda", period || "FY"));
   } catch (error) {
-    console.error("[api/impact] Error:", error);
+    logger.error("[api/impact] Error", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: "Data temporarily unavailable", lastUpdated: new Date().toISOString() },
       { status: 500, headers: { "Cache-Control": "no-store" } },

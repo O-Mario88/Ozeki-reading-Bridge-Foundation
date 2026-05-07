@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getQuizForLessonPostgres } from "@/lib/server/postgres/repositories/lesson-lms";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -14,7 +15,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
     }
     return NextResponse.json(quiz, { headers: { "Cache-Control": "public, max-age=600" } });
   } catch (error) {
-    console.error("[api/recorded-lessons/quiz]", error);
+    logger.error("[api/recorded-lessons/quiz]", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Quiz unavailable" }, { status: 500 });
   }
 }

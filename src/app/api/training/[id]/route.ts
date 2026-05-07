@@ -4,6 +4,7 @@ import {
   listTrainingArtifacts,
   listTrainingResources,
 } from "@/lib/training-db";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     return NextResponse.json({ session, resources, artifacts });
   } catch (error) {
-    console.error("Fetch training session failed:", error);
+    logger.error("Fetch training session failed", { error: error instanceof Error ? error.message : String(error) });
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

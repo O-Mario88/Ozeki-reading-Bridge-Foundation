@@ -3,6 +3,7 @@ import { queryPostgres } from "@/lib/server/postgres/client";
 import { cookies } from "next/headers";
 import { PORTAL_SESSION_COOKIE } from "@/lib/auth";
 import { getPortalUserFromSession } from "@/services/dataService";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -69,7 +70,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
 
   } catch (err) {
-    console.error("[telemetry] Lesson Ratings DB Error:", err);
+    logger.error("[telemetry] Lesson Ratings DB Error", { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: "Ratings database crash." }, { status: 500 });
   }
 }

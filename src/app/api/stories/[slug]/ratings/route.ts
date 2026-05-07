@@ -4,6 +4,7 @@ import {
     getStoryBySlugPostgres,
     getStoryRatingStatsPostgres,
 } from "@/lib/server/postgres/repositories/public-content";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
     const slug = (await params).slug;
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         const stats = await getStoryRatingStatsPostgres(story.id);
         return NextResponse.json({ success: true, stats });
     } catch (err: unknown) {
-        console.error("Error adding rating:", err);
+        logger.error("Error adding rating", { error: err instanceof Error ? err.message : String(err) });
         return NextResponse.json({ error: "Failed to record rating" }, { status: 500 });
     }
 }

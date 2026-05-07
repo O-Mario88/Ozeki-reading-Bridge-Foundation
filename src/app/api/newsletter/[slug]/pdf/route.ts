@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getNewsletterIssueBySlug } from "@/lib/content-db";
 import { buildNewsletterPageFragment } from "@/lib/newsletter";
 import { renderBrandedPdf } from "@/lib/server/pdf/render";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -93,7 +94,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Newsletter PDF generation failed:", error);
+    logger.error("Newsletter PDF generation failed", { error: error instanceof Error ? error.message : String(error) });
     return new NextResponse("Failed to generate newsletter PDF.", { status: 500 });
   }
 }

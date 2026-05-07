@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { renderBrandedPdf } from "@/lib/server/pdf/render";
 import type { StoryContentBlock } from "@/lib/types";
 import { getStoryBySlugPostgres } from "@/lib/server/postgres/repositories/public-content";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   const slug = request.nextUrl.searchParams.get("slug");
@@ -127,7 +128,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("PDF engine error:", error);
+    logger.error("PDF engine error", { error: error instanceof Error ? error.message : String(error) });
     return new NextResponse("Failed to generate PDF", { status: 500 });
   }
 }

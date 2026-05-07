@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import { PORTAL_SESSION_COOKIE } from "@/lib/auth";
 import { getPortalUserFromSession } from "@/services/dataService";
 import crypto from 'crypto';
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
 
   } catch (err) {
-    console.error("[telemetry] Lesson View Error:", err);
+    logger.error("[telemetry] Lesson View Error", { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: "Telemetry crash." }, { status: 500 });
   }
 }

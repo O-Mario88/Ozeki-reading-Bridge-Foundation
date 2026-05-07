@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -110,7 +111,7 @@ export async function GET(request: Request) {
       { headers: { "Cache-Control": "public, max-age=900, stale-while-revalidate=1800" } },
     );
   } catch (error) {
-    console.error("[api/impact/choropleth] Error:", error);
+    logger.error("[api/impact/choropleth] Error", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Choropleth unavailable" }, { status: 500 });
   }
 }

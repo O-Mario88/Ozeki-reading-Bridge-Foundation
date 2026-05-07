@@ -5,6 +5,7 @@ import { buildPublicDashboardReportModel, renderPublicDashboardReportHtml } from
 import { renderBrandedPdf } from "@/lib/server/pdf/render";
 import type { PublicDashboardNarrative } from "@/lib/public-dashboard-report-engine";
 import type { PublicImpactAggregate } from "@/lib/types";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,7 +59,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error generating Impact Report PDF:", error);
+    logger.error("Error generating Impact Report PDF", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Failed to generate PDF" }, { status: 500 });
   }
 }

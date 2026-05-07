@@ -3,6 +3,7 @@ import { withPostgresClient } from "@/lib/server/postgres/client";
 import { createDonationIntentPostgres } from "@/lib/server/postgres/repositories/donations";
 import { findFinanceContactByEmailPostgres } from "@/lib/server/postgres/repositories/finance";
 import { createFinanceContactPostgres, createFinanceReceiptPostgres } from "@/lib/server/postgres/repositories/finance-documents";
+import { logger } from "@/lib/logger";
 
 const SYSTEM_ACTOR_ID = Number(process.env.FINANCE_SYSTEM_ACTOR_ID ?? 900001);
 
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error("Sponsorship Checkout Error:", error);
+    logger.error("Sponsorship Checkout Error", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Checkout pipeline failed" }, { status: 500 });
   }
 }

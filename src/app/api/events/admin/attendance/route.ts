@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { updateTeacherAttendanceStatusPostgres } from "@/lib/server/postgres/repositories/training-events";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, message: "Attendance updated." });
   } catch (error: unknown) {
-    console.error("[Attendance API Error]", error);
+    logger.error("[Attendance API Error]", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { message: "Failed to update attendance." },
       { status: 500 }

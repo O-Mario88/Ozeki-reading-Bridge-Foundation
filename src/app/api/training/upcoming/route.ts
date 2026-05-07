@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getUpcomingTrainingsPostgres } from "@/lib/server/postgres/repositories/training-intelligence";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
       { headers: { "Cache-Control": "public, max-age=300, stale-while-revalidate=600" } },
     );
   } catch (error) {
-    console.error("[api/training/upcoming]", error);
+    logger.error("[api/training/upcoming]", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Unavailable" }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePortalUser } from "@/lib/auth";
 import { gradeQuizAttemptPostgres } from "@/lib/server/postgres/repositories/lesson-lms";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid payload" }, { status: 400 });
     }
-    console.error("[api/recorded-lessons/quiz/submit]", error);
+    logger.error("[api/recorded-lessons/quiz/submit]", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Submission failed" }, { status: 500 });
   }
 }

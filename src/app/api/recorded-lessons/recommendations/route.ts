@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requirePortalUser } from "@/lib/auth";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { getRecommendationsForUserPostgres } from "@/lib/server/postgres/repositories/lesson-lms";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -34,7 +35,7 @@ export async function GET(request: Request) {
     });
     return NextResponse.json({ data: recs, context: { schoolId, classGrade }, lastUpdated: new Date().toISOString() });
   } catch (error) {
-    console.error("[api/recorded-lessons/recommendations]", error);
+    logger.error("[api/recorded-lessons/recommendations]", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Recommendations unavailable" }, { status: 500 });
   }
 }

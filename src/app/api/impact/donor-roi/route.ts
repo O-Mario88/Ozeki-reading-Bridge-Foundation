@@ -3,6 +3,7 @@ import {
   getDonorROIPostgres,
   getAllDonorROIAggregatePostgres,
 } from "@/lib/server/postgres/repositories/donor-roi";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
       headers: { "Cache-Control": "public, max-age=600, stale-while-revalidate=1200" },
     });
   } catch (error) {
-    console.error("[api/impact/donor-roi]", error);
+    logger.error("[api/impact/donor-roi]", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Donor ROI unavailable" }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid payload" }, { status: 400 });
     }
-    console.error("[api/training/register]", error);
+    logger.error("[api/training/register]", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Registration failed" }, { status: 500 });
   }
 }

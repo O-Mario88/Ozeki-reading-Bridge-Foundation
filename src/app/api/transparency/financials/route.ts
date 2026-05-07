@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { listFinancePublicSnapshots, listFinanceAuditedStatements } from "@/services/financeService";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,7 @@ export async function GET() {
             audited: safeAudited,
         });
     } catch (error: unknown) {
-        console.error("GET /api/transparency/financials error:", error);
+        logger.error("GET /api/transparency/financials error", { error: error instanceof Error ? error.message : String(error) });
         return NextResponse.json(
             { error: errorMessage(error, "Failed to load public transparency data") },
             { status: 500 }

@@ -3,6 +3,7 @@ import {
   getAtRiskRadarPostgres,
   getCompositeProjectionPostgres,
 } from "@/lib/server/postgres/repositories/at-risk-radar";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
       { headers: { "Cache-Control": "public, max-age=600, stale-while-revalidate=1200" } },
     );
   } catch (error) {
-    console.error("[api/impact/at-risk-radar]", error);
+    logger.error("[api/impact/at-risk-radar]", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Unavailable" }, { status: 500 });
   }
 }

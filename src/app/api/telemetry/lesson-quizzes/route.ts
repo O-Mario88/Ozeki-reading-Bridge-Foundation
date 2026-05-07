@@ -3,6 +3,7 @@ import { queryPostgres } from "@/lib/server/postgres/client";
 import { cookies } from "next/headers";
 import { PORTAL_SESSION_COOKIE } from "@/lib/auth";
 import { getPortalUserFromSession } from "@/services/dataService";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -99,7 +100,7 @@ export async function POST(request: Request) {
     });
 
   } catch (err) {
-    console.error("[telemetry] Lesson Quizzes DB Error:", err);
+    logger.error("[telemetry] Lesson Quizzes DB Error", { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: "Quiz processing engine crashed." }, { status: 500 });
   }
 }

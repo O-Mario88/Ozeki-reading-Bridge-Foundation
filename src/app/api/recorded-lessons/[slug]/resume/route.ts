@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requirePortalUser } from "@/lib/auth";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { getResumePositionPostgres } from "@/lib/server/postgres/repositories/lesson-lms";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -25,7 +26,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
     }
     return NextResponse.json(resume);
   } catch (error) {
-    console.error("[api/recorded-lessons/resume]", error);
+    logger.error("[api/recorded-lessons/resume]", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Resume unavailable" }, { status: 500 });
   }
 }

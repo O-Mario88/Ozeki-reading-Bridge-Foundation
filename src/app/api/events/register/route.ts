@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { withPostgresClient } from "@/lib/server/postgres/client";
 import { ensureTeacherRosterPostgres } from "@/lib/server/postgres/repositories/schools";
 import type { SchoolContactRecord } from "@/lib/types";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
@@ -127,7 +128,7 @@ export async function POST(request: Request) {
         return { success: true, registrationId, targetSchoolId };
       } catch (err) {
         await client.query("ROLLBACK");
-        console.error("Transaction Error:", err);
+        logger.error("Transaction Error", { error: err instanceof Error ? err.message : String(err) });
         throw err;
       }
     });
@@ -139,7 +140,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: unknown) {
-    console.error("[Events API] Registration Error:", error);
+    logger.error("[Events API] Registration Error", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { message: "Server expected an error processing the registration form.", details: error instanceof Error ? error.message : String(error) }, 
       { status: 500 }

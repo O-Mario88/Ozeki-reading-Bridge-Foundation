@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { finalizeEventAndGeneratePathsPostgres } from "@/lib/server/postgres/repositories/training-events";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: unknown) {
-    console.error("[Finalize Event API Error]", error);
+    logger.error("[Finalize Event API Error]", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { message: "Failed to finalize the event." },
       { status: 500 }

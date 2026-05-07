@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { addAttendeeToOnlineTrainingSessionPostgres } from "@/lib/server/postgres/repositories/training";
 import { addAttendeeToCalendarEvent } from "@/lib/google-calendar";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -37,7 +38,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         { status: 400 }
       );
     }
-    console.error("[rsvp] Failed to process attendance confirmation:", error);
+    logger.error("[rsvp] Failed to process attendance confirmation", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Server error during RSVP" }, { status: 500 });
   }
 }

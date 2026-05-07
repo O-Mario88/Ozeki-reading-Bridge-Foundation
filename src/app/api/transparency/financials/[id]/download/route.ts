@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { listFinancePublicSnapshots, listFinanceAuditedStatements } from "@/services/financeService";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +76,7 @@ export async function GET(
         if (getErrorCode(error) === "ENOENT") {
             return new NextResponse("File not found on disk", { status: 404 });
         }
-        console.error("Download error:", error);
+        logger.error("Download error", { error: error instanceof Error ? error.message : String(error) });
         return new NextResponse("Internal server error", { status: 500 });
     }
 }

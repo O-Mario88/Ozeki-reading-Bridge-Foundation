@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
     );
     return NextResponse.json({ schools: res.rows });
   } catch (error) {
-    console.error("[public/schools] Search error:", error);
+    logger.error("[public/schools] Search error", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ schools: [] });
   }
 }

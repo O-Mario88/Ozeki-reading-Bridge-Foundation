@@ -4,6 +4,7 @@ import {
     getStoryBySlugPostgres,
     listStoryCommentsPostgres,
 } from "@/lib/server/postgres/repositories/public-content";
+import { logger } from "@/lib/logger";
 
 const BAD_WORDS = /fuck|shit|bitch|asshole|cunt|dick/i;
 
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         );
         return NextResponse.json({ success: true, comment: newComment });
     } catch (err: unknown) {
-        console.error("Error adding comment:", err);
+        logger.error("Error adding comment", { error: err instanceof Error ? err.message : String(err) });
         return NextResponse.json({ error: "Failed to post comment" }, { status: 500 });
     }
 }

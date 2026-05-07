@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, sessionId });
     }
   } catch (error) {
-    console.error("Telemetry Pipeline Error:", error);
+    logger.error("Telemetry Pipeline Error", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Telemetry failed" }, { status: 500 });
   }
 }

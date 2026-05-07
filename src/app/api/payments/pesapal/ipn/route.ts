@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
 import { verifyPesapalTransactionStatus } from "@/lib/server/payments/pesapal";
 import { generateReceiptNumber } from "@/lib/server/payments/receipt-numbers";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
    try {
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Transaction orphan blocked." }, { status: 404 });
 
    } catch(e: unknown) {
-      console.error("[PESAPAL IPN FATAL EXCEPTION]", e);
+      logger.error("[PESAPAL IPN FATAL EXCEPTION]", { error: e instanceof Error ? e.message : String(e) });
       return NextResponse.json({ message: "Internal Integration Fault" }, { status: 500 });
    }
 }
