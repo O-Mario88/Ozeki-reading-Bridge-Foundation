@@ -155,13 +155,15 @@ export async function createDonationIntentPostgres(
     `INSERT INTO donations (
        donation_reference, donor_type, donor_name, organization_name, email, phone, country, district_or_city,
        donation_purpose, supported_school_name, supported_school_district, donor_message,
-       anonymous, consent_to_updates, amount, currency, payment_status, pesapal_merchant_reference
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'Pending Payment', $17) RETURNING id`,
+       anonymous, consent_to_updates, amount, currency, payment_status, pesapal_merchant_reference,
+       payment_method
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'Pending Payment', $17, $18) RETURNING id`,
     [
       donationRef, payload.donorType, payload.donorName, payload.organizationName, payload.email,
       payload.phone, payload.country, payload.districtOrCity, payload.donationPurpose, payload.supportedSchoolName,
       payload.supportedSchoolDistrict, payload.donorMessage, payload.anonymous, payload.consentToUpdates,
       payload.amount, payload.currency || "UGX", merchantRef,
+      payload.paymentMethod ?? null,
     ],
   );
   return { id: Number(res.rows[0].id), merchantReference: merchantRef };

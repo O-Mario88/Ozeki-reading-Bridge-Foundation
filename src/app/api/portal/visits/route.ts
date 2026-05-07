@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
       `SELECT cv.id, cv.visit_uid, cv.school_id, cv.visit_date::text AS visit_date,
               cv.visit_type, cv.coaching_cycle_number, cv.coach_user_id,
               cv.implementation_status, cv.visit_pathway, cv.visit_reason,
-              cv.focus_areas_json, cv.created_at::text AS created_at,
+              cv.focus_areas_json, cv.notes, cv.created_at::text AS created_at,
               s.name AS school_name, s.district,
               u.full_name AS coach_name
        FROM coaching_visits cv
@@ -129,8 +129,9 @@ export async function POST(req: NextRequest) {
              implementation_status, visit_pathway, classes_implementing_json,
              classes_not_implementing_json, visit_reason,
              visit_reasons_json, time_from, time_to, sponsorship_type, sponsored_by_contact_id,
+             notes,
              created_at, updated_at
-           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW(), NOW())
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW(), NOW())
            RETURNING id`,
           [
             visitUid, portalRecordId, v.schoolId, v.visitDate, v.visitType,
@@ -143,6 +144,7 @@ export async function POST(req: NextRequest) {
             JSON.stringify(v.visitReasons ?? []),
             v.startTime ?? null, v.endTime ?? null,
             v.sponsorshipType ?? null, v.sponsoredByContactId ?? null,
+            v.notes ?? null,
           ],
         );
         await client.query("COMMIT");

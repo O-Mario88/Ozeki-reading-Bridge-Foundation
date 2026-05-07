@@ -279,11 +279,34 @@ export const getImpactReportFilterFacetsAsyncPostgres = unstable_cache(
   { revalidate: 3600, tags: ["impact"] }
 );
 
-export async function getReportPreviewStatsPostgres(_filters: Record<string, unknown>): Promise<{ reachTotal: number; improvementPct: number; costPerLearner: number }> {
+export async function getReportPreviewStatsPostgres(filters: Record<string, unknown>): Promise<{ reachTotal: number; improvementPct: number; costPerLearner: number; pending: boolean; reason: string }> {
+    // Real preview stats derived from records in scope. The
+    // periodStart/periodEnd + scope filters in `filters` are honoured for
+    // reachTotal so the operator sees a meaningful "this report will cover N
+    // learners" estimate. improvementPct + costPerLearner are not yet wired
+    // — they require benchmark deltas + cost ledger joins that the report
+    // module's contract has not finalised. Returned with `pending:true` so
+    // the UI can render "—" rather than a misleading 0.
+    let reachTotal = 0;
+    try {
+        const periodStart = typeof filters.periodStart === "string" ? filters.periodStart : null;
+        const periodEnd = typeof filters.periodEnd === "string" ? filters.periodEnd : null;
+        const where: string[] = ["learner_uid IS NOT NULL", "learner_uid <> ''"];
+        const params: unknown[] = [];
+        if (periodStart) { params.push(periodStart); where.push(`assessment_date >= $${params.length}`); }
+        if (periodEnd)   { params.push(periodEnd);   where.push(`assessment_date <= $${params.length}`); }
+        const res = await queryPostgres<{ n: number }>(
+            `SELECT COUNT(DISTINCT learner_uid)::int AS n FROM assessment_records WHERE ${where.join(" AND ")}`,
+            params,
+        );
+        reachTotal = Number(res.rows[0]?.n ?? 0);
+    } catch { /* leave reachTotal at 0 */ }
     return {
-        reachTotal: 0,
+        reachTotal,
         improvementPct: 0,
-        costPerLearner: 0
+        costPerLearner: 0,
+        pending: true,
+        reason: "improvementPct and costPerLearner are not yet wired; reachTotal is computed from assessment_records in scope.",
     };
 }
 
@@ -332,10 +355,29 @@ export async function listPublicImpactReportsAsyncPostgres(limitOrFilters: numbe
     }
 }
 
-export async function runImpactCalculatorPostgres(_input: Record<string, unknown>): Promise<{ projectedImpact: number; confidenceInterval: [number, number] }> {
+export async function runImpactCalculatorPostgres(input: Record<string, unknown>): Promise<{ projectedImpact: number; confidenceInterval: [number, number]; pending: boolean; reason: string }> {
+    // Best-effort projection: amount / costPerLearnerAssessed (from the
+    // cost-effectiveness aggregate). Confidence interval is left at [0,0]
+    // and `pending:true` is returned because the variance model + the
+    // costPerLearnerImproved denominator are not yet wired. The amount-
+    // based projection is deliberately a floor estimate — actual impact
+    // depends on programme mix.
+    const amount = Number(input.amount ?? 0);
+    let projectedImpact = 0;
+    try {
+        const level = typeof input.level === "string" ? input.level : "country";
+        const id = input.id == null ? "" : String(input.id);
+        const cost = await getCostEffectivenessDataPostgres(level, id, undefined);
+        const cpl = Number(cost?.costPerLearnerAssessed ?? 0);
+        if (cpl > 0 && amount > 0) {
+            projectedImpact = Math.floor(amount / cpl);
+        }
+    } catch { /* leave projectedImpact at 0 */ }
     return {
-        projectedImpact: 0,
-        confidenceInterval: [0, 0]
+        projectedImpact,
+        confidenceInterval: [0, 0],
+        pending: true,
+        reason: "Confidence interval not yet modelled; projectedImpact is a floor estimate based on cost-per-learner-assessed.",
     };
 }
 
@@ -430,6 +472,8 @@ const _getPortalDashboardDataPostgres = unstable_cache(
       assessmentsRes,
       recentRes,
       demoVisitsRes,
+      learnersReachedRes,
+      schoolsImplementingRes,
     ] = await chunkedPromiseAll([
       () => queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records`),
       () => queryPostgres(`SELECT COUNT(*)::int AS total FROM schools_directory`),
@@ -439,6 +483,30 @@ const _getPortalDashboardDataPostgres = unstable_cache(
       () => queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records WHERE module = 'assessment'`),
       () => queryPostgres(`SELECT id, module, status, school_name AS "schoolName", date, created_at AS "createdAt" FROM portal_records ORDER BY created_at DESC LIMIT 10`),
       () => queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records WHERE module = 'visit' AND (payload_json->>'demoDelivered' = 'true' OR payload_json->>'demoClass' IS NOT NULL)`),
+      // Distinct learners actually assessed — replaces the previous
+      // assessments * 25 fabrication. learner_uid is the canonical
+      // pseudonymised identifier. NULLs (anonymous walk-ins) are excluded
+      // from the distinct count to avoid collapsing every anonymous
+      // record into one phantom learner.
+      () => queryPostgres(
+        `SELECT COUNT(DISTINCT learner_uid)::int AS total
+         FROM assessment_records
+         WHERE learner_uid IS NOT NULL AND learner_uid <> ''`,
+      ),
+      // A school is "implementing" if its most recent coaching visit's
+      // implementation_status is anything other than 'not_started'.
+      // Schools that have never been visited are treated as not yet
+      // implementing — they're in the directory but no programme has
+      // started there.
+      () => queryPostgres(
+        `WITH latest AS (
+           SELECT DISTINCT ON (school_id) school_id, implementation_status
+           FROM coaching_visits
+           ORDER BY school_id, visit_date DESC, id DESC
+         )
+         SELECT COUNT(*) FILTER (WHERE implementation_status <> 'not_started')::int AS implementing
+         FROM latest`,
+      ),
     ], 2);
 
     const totalRecords = toNumber(recordsRes.rows[0]?.total);
@@ -446,6 +514,10 @@ const _getPortalDashboardDataPostgres = unstable_cache(
     const trainings = toNumber(trainingsRes.rows[0]?.total);
     const assessments = toNumber(assessmentsRes.rows[0]?.total);
     const demoVisitsConducted = toNumber(demoVisitsRes.rows[0]?.total);
+    const learnersReached = toNumber(learnersReachedRes.rows[0]?.total);
+    const schoolsImplementing = toNumber(schoolsImplementingRes.rows[0]?.implementing);
+    const schoolsImplementingPercent =
+      activeSchools > 0 ? Math.round((schoolsImplementing / activeSchools) * 100) : 0;
 
     const mappedRecentActivity = recentRes.rows.map((r: Record<string, unknown>) => ({
       id: Number(r.id),
@@ -459,13 +531,13 @@ const _getPortalDashboardDataPostgres = unstable_cache(
       ...emptyDashboard,
       kpis: {
         ...emptyDashboard.kpis,
-        learnersReached: assessments * 25,
+        learnersReached,
         trainingsLogged: trainings,
         schoolVisits: demoVisitsConducted,
         assessments,
         storyActivities: 0,
-        schoolsImplementingPercent: activeSchools > 0 ? 100 : 0,
-        schoolsNotImplementingPercent: 0,
+        schoolsImplementingPercent,
+        schoolsNotImplementingPercent: Math.max(0, 100 - schoolsImplementingPercent),
         demoVisitsConducted: demoVisitsConducted,
       },
       stats: {

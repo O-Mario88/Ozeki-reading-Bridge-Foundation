@@ -25,6 +25,15 @@ const donationSchema = z.object({
   districtOrCity: z.string().trim().max(200).nullable().optional(),
   anonymous: z.boolean().optional(),
   consentToUpdates: z.boolean().optional(),
+  // Donor-selected payment channel (e.g., "Mobile Money", "Card",
+  // "Bank Transfer"). Stored on the donation row for reporting. Pesapal's
+  // hosted iframe is the authoritative payment selector, so this is purely
+  // informational.
+  paymentMethod: z.string().trim().max(80).nullable().optional(),
+  // Donor-supplied identifier hint for the chosen channel (e.g., mobile-
+  // money phone). NOT persisted — Pesapal handles channel-specific PII on
+  // its hosted form. Accepted here only so the form payload validates.
+  paymentIdentifier: z.string().trim().max(100).nullable().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -88,6 +97,7 @@ export async function POST(request: NextRequest) {
       districtOrCity: body.districtOrCity ?? null,
       anonymous: Boolean(body.anonymous),
       consentToUpdates: Boolean(body.consentToUpdates),
+      paymentMethod: body.paymentMethod ?? null,
     });
 
     // 2. Initiate Pesapal payment
