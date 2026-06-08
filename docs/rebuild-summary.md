@@ -30,11 +30,12 @@
   `backend/scripts/backup_sqlite.sh`.
 - Legacy ID preservation included for traceability.
 
-## AWS Deployment Structure
-- Frontend (`frontend/`) prepared for Amplify SSR build.
-- Backend (`backend/`) prepared for Python runtime deployment (EB/App Runner style).
-- PostgreSQL-only runtime via `DATABASE_URL` (RDS target).
-- S3-ready media/static strategy via environment configuration.
+## Deployment Structure (Railway)
+- Single standalone Next.js app (`output: "standalone"`), deployed on Railway via the repo `Dockerfile` (`node server.js`).
+- PostgreSQL-only runtime via `DATABASE_URL` (Railway Postgres or any managed Postgres).
+- S3-compatible media/static strategy via environment configuration.
+
+> Note: this project originally targeted AWS Amplify; it was migrated to Railway. See `docs/railway-deployment.md` for the current deployment and the Amplify teardown checklist.
 
 ## Verification Steps Completed
 - Backend lint/check + migrations generation + test smoke (see root README runbook).
