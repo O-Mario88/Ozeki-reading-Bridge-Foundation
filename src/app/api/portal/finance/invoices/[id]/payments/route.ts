@@ -37,7 +37,7 @@ export async function GET(
   if (!Number.isFinite(invoiceId)) {
     return NextResponse.json({ error: "Invalid invoice id." }, { status: 400 });
   }
-  return NextResponse.json({ payments: listFinancePayments({ invoiceId }) });
+  return NextResponse.json({ payments: await listFinancePayments({ invoiceId }) });
 }
 
 export async function POST(

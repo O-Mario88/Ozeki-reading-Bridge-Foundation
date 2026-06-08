@@ -1,3 +1,5 @@
+import { queryPostgres } from "@/lib/server/postgres/client";
+
 // Wildcard exports for Postgres-suffixed names
 export * from "@/lib/server/postgres/repositories/finance";
 export * from "@/lib/server/postgres/repositories/finance-reports";
@@ -145,8 +147,30 @@ export async function autoSuggestMatches(_statementLineId: number) {
     return [];
 }
 
-export async function listFinancePayments(_filter: unknown) {
-    return [];
+export async function listFinancePayments(filter: { invoiceId?: number } = {}) {
+    // Real read of recorded payments. Payments ARE created (recordFinancePayment
+    // → finance_payments), so the prior []-stub left the invoice payment-history
+    // view permanently empty. Returns posted + voided rows (excludes drafts) so
+    // the full history is visible; status is included for the UI to render.
+    const params: unknown[] = [];
+    const where: string[] = ["status <> 'draft'"];
+    const invoiceId = Number(filter?.invoiceId);
+    if (Number.isFinite(invoiceId) && invoiceId > 0) {
+        params.push(invoiceId);
+        where.push(`related_invoice_id = $${params.length}`);
+    }
+    const res = await queryPostgres(
+        `SELECT id,
+                related_invoice_id AS "invoiceId",
+                date, amount, currency, method, reference, notes, status,
+                void_reason AS "voidReason",
+                created_at AS "createdAt"
+         FROM finance_payments
+         WHERE ${where.join(" AND ")}
+         ORDER BY date DESC, id DESC`,
+        params,
+    );
+    return res.rows;
 }
 
 // ── Expenses are natively exported above ───────────────────────────
