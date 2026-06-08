@@ -40,7 +40,7 @@ export async function POST() {
     // restrict to Super Admin. (Previously this handler had NO auth check at
     // all, so any anonymous caller could overwrite the geo tables.)
     const auth = await authorizeSuperAdmin();
-    if (!auth.authorized) return auth.response;
+    if (!auth.authorized) return auth.response ?? NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
     try {
         // Transform regionSeed to UgandaGeoUnit format for the importer
         // Note: Since our current seed only goes down to District, we'll use placeholders for SC/Parish if needed,
