@@ -2,9 +2,17 @@ import { NextResponse } from "next/server";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { createGoogleCalendarEvent, isGoogleCalendarConfigured } from "@/lib/google-calendar";
 import { logger } from "@/lib/logger";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 
 
 export async function POST(request: Request) {
+  // Creating a training event provisions DB rows and a Google Calendar entry —
+  // require an authenticated portal staff session. (Previously unguarded: any
+  // anonymous caller could create events and calendar entries.)
+  const actor = await getAuthenticatedPortalUser();
+  if (!actor) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
   try {
     const body = await request.json();
     const { 

@@ -2,8 +2,14 @@ import { NextResponse } from "next/server";
 import { importUgandaGeoData } from "@/lib/geo-importer";
 import { queryPostgres, requirePostgresConfigured } from "@/lib/server/postgres/client";
 import { ugandaRegions } from "@/lib/uganda-locations";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
+import { authorizeSuperAdmin } from "@/app/api/portal/_shared/auth";
 
 export async function GET() {
+    const user = await getAuthenticatedPortalUser();
+    if (!user) {
+        return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
     try {
         requirePostgresConfigured();
         const [regions, subregions, districts, subcounties, parishes] = await Promise.all([
@@ -30,6 +36,11 @@ export async function GET() {
 }
 
 export async function POST() {
+    // Bulk geo-hierarchy import is a destructive, system-level data overwrite —
+    // restrict to Super Admin. (Previously this handler had NO auth check at
+    // all, so any anonymous caller could overwrite the geo tables.)
+    const auth = await authorizeSuperAdmin();
+    if (!auth.authorized) return auth.response;
     try {
         // Transform regionSeed to UgandaGeoUnit format for the importer
         // Note: Since our current seed only goes down to District, we'll use placeholders for SC/Parish if needed,
