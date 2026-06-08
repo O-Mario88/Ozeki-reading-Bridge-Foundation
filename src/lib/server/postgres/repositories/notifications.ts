@@ -1,4 +1,5 @@
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { logger } from "@/lib/logger";
 import type { PlatformEventType } from "@/lib/server/events/types";
 
 export type NotificationRow = {
@@ -50,7 +51,7 @@ export async function listNotificationsForUserPostgres(
       readAt: r.read_at ? String(r.read_at) : null,
       createdAt: String(r.created_at),
     }));
-  } catch { return []; }
+  } catch (error) { logger.error("[notifications] query failed; returning empty list", { error: String(error) }); return []; }
 }
 
 export async function countUnreadNotificationsPostgres(userId: number): Promise<number> {
@@ -60,7 +61,7 @@ export async function countUnreadNotificationsPostgres(userId: number): Promise<
       [userId],
     );
     return Number(res.rows[0]?.n ?? 0);
-  } catch { return 0; }
+  } catch (error) { logger.error("[notifications] query failed; returning 0", { error: String(error) }); return 0; }
 }
 
 export async function markNotificationReadPostgres(id: number, userId: number): Promise<void> {
@@ -116,7 +117,7 @@ export async function listSubscribersForEventPostgres(
       [eventType, channel],
     );
     return res.rows.map((r) => Number(r.user_id));
-  } catch { return []; }
+  } catch (error) { logger.error("[notifications] query failed; returning empty list", { error: String(error) }); return []; }
 }
 
 export async function listSubscriptionsForUserPostgres(userId: number): Promise<SubscriptionRow[]> {
@@ -134,7 +135,7 @@ export async function listSubscriptionsForUserPostgres(userId: number): Promise<
       channel: String(r.channel) as "in_app" | "email" | "sms",
       isEnabled: Boolean(r.is_enabled),
     }));
-  } catch { return []; }
+  } catch (error) { logger.error("[notifications] query failed; returning empty list", { error: String(error) }); return []; }
 }
 
 export async function upsertSubscriptionPostgres(input: {

@@ -1,4 +1,5 @@
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { logger } from "@/lib/logger";
 
 export type SponsorshipRow = {
   id: number;
@@ -196,7 +197,8 @@ export async function getSponsorshipImpactDataPostgres(sponsorship: SponsorshipR
       trainingsCount: Number(activities.rows[0]?.trainings ?? 0),
       visitsCount: Number(activities.rows[0]?.visits ?? 0),
     };
-  } catch {
+  } catch (error) {
+    logger.error("[sponsorships] aggregate query failed; returning zeros (possible schema drift)", { error: String(error) });
     return { schoolsCount: 0, teachersCount: 0, learnersCount: 0, trainingsCount: 0, visitsCount: 0 };
   }
 }

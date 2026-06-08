@@ -1,4 +1,5 @@
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { logger } from "@/lib/logger";
 
 export type DonorSchoolOutcome = {
   schoolId: number;
@@ -113,7 +114,7 @@ export async function getDonorROIPostgres(input: {
       costPerLearner,
       outcomes,
     };
-  } catch { return null; }
+  } catch (error) { logger.error("[donor-roi] query failed; returning null", { error: String(error) }); return null; }
 }
 
 /**

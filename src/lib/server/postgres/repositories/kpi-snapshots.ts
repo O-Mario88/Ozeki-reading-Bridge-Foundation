@@ -1,4 +1,5 @@
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { logger } from "@/lib/logger";
 
 export type SchoolKpiSnapshot = {
   schoolId: number;
@@ -62,7 +63,7 @@ export async function getSchoolKpiSnapshotPostgres(schoolId: number): Promise<Sc
     if (res.rows.length === 0) return null;
     const r = res.rows[0];
     return mapSchool(r);
-  } catch { return null; }
+  } catch (error) { logger.error("[kpi-snapshots] query failed; returning null", { error: String(error) }); return null; }
 }
 
 export async function listSchoolKpiSnapshotsPostgres(options: { atRisk?: boolean; district?: string; limit?: number }): Promise<SchoolKpiSnapshot[]> {
@@ -86,7 +87,7 @@ export async function listSchoolKpiSnapshotsPostgres(options: { atRisk?: boolean
       params,
     );
     return res.rows.map(mapSchool);
-  } catch { return []; }
+  } catch (error) { logger.error("[kpi-snapshots] query failed; returning empty list", { error: String(error) }); return []; }
 }
 
 export async function getNationalKpiSnapshotPostgres(): Promise<NationalKpiSnapshot | null> {
@@ -108,7 +109,7 @@ export async function getNationalKpiSnapshotPostgres(): Promise<NationalKpiSnaps
       avgCompositeDelta: r.avg_composite_delta !== null && r.avg_composite_delta !== undefined ? Number(r.avg_composite_delta) : null,
       updatedAt: String(r.updated_at),
     };
-  } catch { return null; }
+  } catch (error) { logger.error("[kpi-snapshots] query failed; returning null", { error: String(error) }); return null; }
 }
 
 export async function listDistrictKpiSnapshotsPostgres(): Promise<DistrictKpiSnapshot[]> {
@@ -129,7 +130,7 @@ export async function listDistrictKpiSnapshotsPostgres(): Promise<DistrictKpiSna
       coveragePct: r.coverage_pct !== null && r.coverage_pct !== undefined ? Number(r.coverage_pct) : null,
       updatedAt: String(r.updated_at),
     }));
-  } catch { return []; }
+  } catch (error) { logger.error("[kpi-snapshots] query failed; returning empty list", { error: String(error) }); return []; }
 }
 
 export async function refreshAllKpiSnapshotsPostgres(options: {

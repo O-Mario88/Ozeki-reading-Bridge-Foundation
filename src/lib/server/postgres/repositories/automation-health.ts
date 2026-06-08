@@ -1,4 +1,5 @@
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { logger } from "@/lib/logger";
 
 export type AutomationHealthSummary = {
   eventsPublishedToday: number;
@@ -112,7 +113,7 @@ export async function getHandlerHealthPostgres(): Promise<HandlerHealthRow[]> {
         p95DurationMs: r.p95_ms !== null && r.p95_ms !== undefined ? Number(r.p95_ms) : null,
       };
     });
-  } catch { return []; }
+  } catch (error) { logger.error("[automation-health] query failed; returning empty list", { error: String(error) }); return []; }
 }
 
 export type RecentEventRow = {
@@ -142,5 +143,5 @@ export async function getRecentEventsPostgres(limit = 30): Promise<RecentEventRo
       durationMs: r.duration_ms !== null && r.duration_ms !== undefined ? Math.round(Number(r.duration_ms)) : null,
       errorMessage: r.error_message ? String(r.error_message) : null,
     }));
-  } catch { return []; }
+  } catch (error) { logger.error("[automation-health] query failed; returning empty list", { error: String(error) }); return []; }
 }

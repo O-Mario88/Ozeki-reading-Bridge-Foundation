@@ -1,4 +1,5 @@
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { logger } from "@/lib/logger";
 
 export type AtRiskRadarEntry = {
   schoolId: number;
@@ -173,5 +174,5 @@ export async function getCompositeProjectionPostgres(): Promise<TrajectoryProjec
           ? `Based on ${n} quarters of data covering ${totalN.toLocaleString()} assessments, the national reading composite is projected to reach ${projected12mo.toFixed(2)} in 12 months if the current trajectory holds.`
           : `Projection based on ${n} periods — ${confidence} confidence. More assessment data will sharpen this estimate.`,
     };
-  } catch { return null; }
+  } catch (error) { logger.error("[at-risk-radar] query failed; returning null", { error: String(error) }); return null; }
 }

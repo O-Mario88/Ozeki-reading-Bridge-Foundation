@@ -1,4 +1,5 @@
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { logger } from "@/lib/logger";
 
 export type WorkflowCondition = {
   field: string;
@@ -71,14 +72,14 @@ export async function listWorkflowsPostgres(options: { triggerEvent?: string; en
       params,
     );
     return res.rows.map(mapWorkflow);
-  } catch { return []; }
+  } catch (error) { logger.error("[workflows] query failed; returning empty list", { error: String(error) }); return []; }
 }
 
 export async function getWorkflowByIdPostgres(id: number): Promise<WorkflowRow | null> {
   try {
     const res = await queryPostgres(`SELECT * FROM workflows WHERE id = $1`, [id]);
     return res.rows.length > 0 ? mapWorkflow(res.rows[0]) : null;
-  } catch { return null; }
+  } catch (error) { logger.error("[workflows] query failed; returning null", { error: String(error) }); return null; }
 }
 
 export async function createWorkflowPostgres(input: {
