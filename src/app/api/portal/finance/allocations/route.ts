@@ -17,10 +17,10 @@ export async function GET(request: NextRequest) {
     const invoiceId = url.searchParams.get("invoiceId");
 
     if (paymentId) {
-        return NextResponse.json({ allocations: listPaymentAllocations(Number(paymentId)) });
+        return NextResponse.json({ allocations: await listPaymentAllocations(Number(paymentId)) });
     }
     if (invoiceId) {
-        return NextResponse.json({ allocations: listInvoiceAllocations(Number(invoiceId)) });
+        return NextResponse.json({ allocations: await listInvoiceAllocations(Number(invoiceId)) });
     }
     return NextResponse.json({ error: "Provide paymentId or invoiceId" }, { status: 400 });
 }
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     try {
         if (action === "allocate") {
-            const allocation = allocatePayment(
+            const allocation = await allocatePayment(
                 actor,
                 Number(body.paymentId),
                 Number(body.invoiceId),
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         }
 
         if (action === "deallocate") {
-            deallocatePayment(actor, Number(body.allocationId));
+            await deallocatePayment(actor, Number(body.allocationId));
             return NextResponse.json({ ok: true });
         }
 

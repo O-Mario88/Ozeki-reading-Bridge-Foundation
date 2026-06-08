@@ -1,4 +1,4 @@
-import { queryPostgres } from "@/lib/server/postgres/client";
+import { queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
 
 // Wildcard exports for Postgres-suffixed names
 export * from "@/lib/server/postgres/repositories/finance";
@@ -95,24 +95,128 @@ export {
   upsertMonthlyBudgetPostgres as upsertMonthlyBudget,
 } from "@/lib/server/postgres/repositories/finance-documents";
 
-export async function voidFinancePaymentAsync(_id: number, _reason: string, _actor: FinanceActor) {
-    throw new Error("voidFinancePaymentAsync: not yet migrated to PostgreSQL");
+export async function voidFinancePaymentAsync(id: number, reason: string, actor: FinanceActor) {
+    // Reverse a posted invoice payment. This mirrors recordInvoicePaymentPostgres
+    // (finance-lifecycle.ts) step-for-step in reverse, inside one transaction:
+    //   payment → void, its receipt → void, its ledger entry → void, drop the
+    //   auto-created allocation, then recompute the invoice's paid_amount /
+    //   balance_due / status from the remaining POSTED payments using the SAME
+    //   sum query the record flow uses. Consistent with the existing void-receipt
+    //   behaviour in finance-documents.ts.
+    // Known gap (matches void-receipt): the GL journal entry posted via
+    //   postReceiptToGl is not reversed here — GL reversal needs a dedicated
+    //   reversing entry and is out of scope for this mirror.
+    const actorId = Number((actor as { id?: unknown })?.id) || null;
+    return withPostgresClient(async (client) => {
+        await client.query("BEGIN");
+
+        const payRes = await client.query(
+            `SELECT id, related_invoice_id AS "invoiceId", amount, status
+               FROM finance_payments WHERE id = $1`,
+            [id],
+        );
+        const pay = payRes.rows[0] as { id: number; invoiceId: number; amount: number; status: string } | undefined;
+        if (!pay) throw new Error("Payment not found.");
+        if (pay.status === "void") throw new Error("Payment is already void.");
+        if (pay.status !== "posted") throw new Error("Only posted payments can be voided.");
+
+        await client.query(
+            `UPDATE finance_payments SET status = 'void', void_reason = $2 WHERE id = $1`,
+            [id, reason],
+        );
+        await client.query(
+            `UPDATE finance_receipts SET status = 'void', void_reason = $2
+              WHERE payment_id = $1 AND status <> 'void'`,
+            [id, reason],
+        );
+        await client.query(
+            `UPDATE finance_transactions_ledger SET posted_status = 'void', void_reason = $2
+              WHERE source_type = 'invoice_payment' AND source_id = $1 AND posted_status <> 'void'`,
+            [id, reason],
+        );
+        await client.query(`DELETE FROM finance_payment_allocations WHERE payment_id = $1`, [id]);
+
+        const updated = await client.query(
+            `WITH sums AS (
+               SELECT COALESCE(SUM(amount), 0) AS total_paid
+               FROM finance_payments
+               WHERE related_invoice_id = $1 AND status = 'posted'
+                 AND archived_due_to_finance_reset IS FALSE
+             )
+             UPDATE finance_invoices fi
+             SET paid_amount = sums.total_paid,
+                 balance_due = fi.total - sums.total_paid,
+                 status = CASE
+                   WHEN sums.total_paid >= fi.total THEN 'paid'
+                   WHEN sums.total_paid > 0 THEN 'partially_paid'
+                   ELSE 'sent'
+                 END,
+                 updated_at = NOW()
+             FROM sums
+             WHERE fi.id = $1 AND fi.status IN ('paid', 'partially_paid', 'sent')
+             RETURNING id, balance_due AS "balanceDue", paid_amount AS "paidAmount", status`,
+            [pay.invoiceId],
+        );
+
+        await client.query("COMMIT");
+        return {
+            id,
+            invoiceId: pay.invoiceId,
+            amount: Number(pay.amount),
+            status: "void" as const,
+            voidReason: reason,
+            voidedByUserId: actorId,
+            invoice: (updated.rows[0] as Record<string, unknown> | undefined) ?? null,
+        };
+    });
 }
 
 export async function allocatePayment(_actorOrPaymentId: unknown, _invoiceIdOrAmount?: unknown, ..._extra: unknown[]) {
-    throw new Error("allocatePayment: not yet migrated to PostgreSQL");
+    // Manual payment→invoice allocation is intentionally unsupported: in this
+    // codebase a payment is auto-allocated 1:1 to its invoice when recorded
+    // (recordInvoicePaymentPostgres) and invoice balances are derived from
+    // posted payments, so a manual split-allocation model would double-count.
+    throw new Error("Manual payment allocation is not supported: payments are auto-allocated to their invoice when recorded.");
 }
 
 export async function deallocatePayment(_actorOrPaymentId: unknown, _invoiceIdOrAllocationId?: unknown) {
-    throw new Error("deallocatePayment: not yet migrated to PostgreSQL");
+    throw new Error("Manual payment de-allocation is not supported: void the payment instead (POST /api/portal/finance/payments/[id]/void).");
 }
 
-export async function listPaymentAllocations(_paymentId: number) {
-    return [];
+export async function listPaymentAllocations(paymentId: number) {
+    const res = await queryPostgres(
+        `SELECT a.id,
+                a.payment_id      AS "paymentId",
+                a.invoice_id      AS "invoiceId",
+                a.allocated_amount AS "allocatedAmount",
+                a.created_at      AS "createdAt",
+                i.invoice_number  AS "invoiceNumber"
+           FROM finance_payment_allocations a
+           LEFT JOIN finance_invoices i ON i.id = a.invoice_id
+          WHERE a.payment_id = $1
+          ORDER BY a.id`,
+        [paymentId],
+    );
+    return res.rows;
 }
 
-export async function listInvoiceAllocations(_invoiceId: number) {
-    return [];
+export async function listInvoiceAllocations(invoiceId: number) {
+    const res = await queryPostgres(
+        `SELECT a.id,
+                a.payment_id      AS "paymentId",
+                a.invoice_id      AS "invoiceId",
+                a.allocated_amount AS "allocatedAmount",
+                a.created_at      AS "createdAt",
+                p.reference       AS "paymentReference",
+                p.date            AS "paymentDate",
+                p.status          AS "paymentStatus"
+           FROM finance_payment_allocations a
+           LEFT JOIN finance_payments p ON p.id = a.payment_id
+          WHERE a.invoice_id = $1
+          ORDER BY a.id`,
+        [invoiceId],
+    );
+    return res.rows;
 }
 
 // ── Contacts (now natively exported above) ───────────────────────────
