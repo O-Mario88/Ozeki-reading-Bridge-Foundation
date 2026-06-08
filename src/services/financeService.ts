@@ -1,4 +1,4 @@
-import { queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
+import { queryPostgres, withPostgresClient, type PostgresClient } from "@/lib/server/postgres/client";
 
 // Wildcard exports for Postgres-suffixed names
 export * from "@/lib/server/postgres/repositories/finance";
@@ -235,20 +235,168 @@ export function verifyFinanceFileSignature(_id: string | number | null, _expires
 }
 
 // ── Reconciliation ───────────────────────────────────────────────────
-export async function getBankStatementReconciliation(..._args: unknown[]) {
-    return { lines: [], summary: { matched: 0, unmatched: 0 } };
+// Link bank/cash/mobile-money statement lines to posted ledger transactions
+// (finance_statement_matches, migration 0076), then roll the result up onto the
+// line's match_status/matched_amount. This is bookkeeping reconciliation — it
+// does NOT move money.
+
+function isPgUniqueViolation(e: unknown): boolean {
+    return !!e && typeof e === "object" && (e as { code?: string }).code === "23505";
 }
 
-export async function matchStatementLineToLedger(..._args: unknown[]) {
-    throw new Error("matchStatementLineToLedger: not yet migrated to PostgreSQL");
+// Recompute a statement line's matched_amount + match_status from the sum of
+// its match rows. Runs on the caller's transaction client.
+async function recomputeStatementLineMatchStatus(client: PostgresClient, statementLineId: number) {
+    const res = await client.query(
+        `WITH m AS (
+           SELECT COALESCE(SUM(matched_amount), 0) AS total
+           FROM finance_statement_matches WHERE statement_line_id = $1
+         )
+         UPDATE finance_statement_lines sl
+         SET matched_amount = m.total,
+             match_status = CASE
+               WHEN m.total <= 0 THEN 'unmatched'
+               WHEN m.total >= ABS(sl.amount) - 0.005 THEN 'matched'
+               ELSE 'partial'
+             END
+         FROM m
+         WHERE sl.id = $1
+         RETURNING match_status AS "matchStatus", matched_amount AS "matchedAmount"`,
+        [statementLineId],
+    );
+    return (res.rows[0] as { matchStatus?: string; matchedAmount?: number } | undefined) ?? null;
 }
 
-export async function unmatchStatementLine(..._args: unknown[]) {
-    throw new Error("unmatchStatementLine: not yet migrated to PostgreSQL");
+export async function getBankStatementReconciliation(
+    filters: { accountType?: string; matchStatus?: string; month?: string; currency?: string } = {},
+) {
+    const { listStatementLinesPostgres } = await import("@/lib/server/postgres/repositories/finance");
+    const lines = await listStatementLinesPostgres({
+        accountType: filters.accountType as never,
+        matchStatus: filters.matchStatus as never,
+        month: filters.month,
+    });
+    const summary = await getReconciliationSummary(filters.month, filters.currency);
+    return { lines, summary };
 }
 
-export async function autoSuggestMatches(_statementLineId: number) {
-    return [];
+export async function matchStatementLineToLedger(
+    actor: FinanceActor,
+    statementLineId: number,
+    ledgerTxnId: number,
+    matchedAmount?: number,
+) {
+    const actorId = Number((actor as { id?: unknown })?.id) || null;
+    return withPostgresClient(async (client) => {
+        await client.query("BEGIN");
+        const lineRes = await client.query(
+            `SELECT id, amount FROM finance_statement_lines WHERE id = $1`,
+            [statementLineId],
+        );
+        const line = lineRes.rows[0] as { id: number; amount: number } | undefined;
+        if (!line) throw new Error("Statement line not found.");
+
+        const ledRes = await client.query(
+            `SELECT id, posted_status FROM finance_transactions_ledger WHERE id = $1`,
+            [ledgerTxnId],
+        );
+        const led = ledRes.rows[0] as { id: number; posted_status: string } | undefined;
+        if (!led) throw new Error("Ledger transaction not found.");
+        if (led.posted_status !== "posted") throw new Error("Only posted ledger transactions can be reconciled.");
+
+        const amount = Number.isFinite(Number(matchedAmount)) && Number(matchedAmount) > 0
+            ? Number(matchedAmount)
+            : Math.abs(Number(line.amount));
+
+        let matchId: number;
+        try {
+            const ins = await client.query(
+                `INSERT INTO finance_statement_matches (statement_line_id, ledger_txn_id, matched_amount, created_by_user_id)
+                 VALUES ($1, $2, $3, $4) RETURNING id`,
+                [statementLineId, ledgerTxnId, amount, actorId],
+            );
+            matchId = Number((ins.rows[0] as { id: number }).id);
+        } catch (e) {
+            if (isPgUniqueViolation(e)) throw new Error("This statement line is already matched to that ledger transaction.");
+            throw e;
+        }
+        const rollup = await recomputeStatementLineMatchStatus(client, statementLineId);
+        await client.query("COMMIT");
+        return {
+            id: matchId,
+            statementLineId,
+            ledgerTxnId,
+            matchedAmount: amount,
+            lineMatchStatus: rollup?.matchStatus ?? null,
+            lineMatchedAmount: rollup?.matchedAmount ?? null,
+        };
+    });
+}
+
+export async function unmatchStatementLine(actor: FinanceActor, matchId: number) {
+    return withPostgresClient(async (client) => {
+        await client.query("BEGIN");
+        const del = await client.query(
+            `DELETE FROM finance_statement_matches WHERE id = $1 RETURNING statement_line_id`,
+            [matchId],
+        );
+        const row = del.rows[0] as { statement_line_id: number } | undefined;
+        if (!row) throw new Error("Match not found.");
+        const statementLineId = Number(row.statement_line_id);
+        const rollup = await recomputeStatementLineMatchStatus(client, statementLineId);
+        await client.query("COMMIT");
+        return { ok: true, statementLineId, lineMatchStatus: rollup?.matchStatus ?? null };
+    });
+}
+
+export async function autoSuggestMatches(statementLineId: number) {
+    // Conservative, non-destructive suggestions: posted ledger txns with the
+    // SAME currency, EXACT amount (±0.01 on absolute value), within ±7 days,
+    // not already linked to this line. Ranked by date proximity. These are hints
+    // only — an actual match requires explicit confirmation via the 'match' action.
+    const lineRes = await queryPostgres(
+        `SELECT id, date::text AS date, amount, currency FROM finance_statement_lines WHERE id = $1`,
+        [statementLineId],
+    );
+    const line = lineRes.rows[0] as { id: number; date: string; amount: number; currency: string } | undefined;
+    if (!line) return [];
+    const res = await queryPostgres(
+        `SELECT l.id              AS "ledgerTxnId",
+                l.txn_type        AS "txnType",
+                l.date::text      AS date,
+                l.amount,
+                l.currency,
+                l.category,
+                l.notes,
+                ABS(l.date - $2::date) AS "dayDiff"
+           FROM finance_transactions_ledger l
+          WHERE l.posted_status = 'posted'
+            AND l.currency = $3
+            AND ABS(l.amount - ABS($4::numeric)) < 0.01
+            AND ABS(l.date - $2::date) <= 7
+            AND NOT EXISTS (
+              SELECT 1 FROM finance_statement_matches m
+               WHERE m.statement_line_id = $1 AND m.ledger_txn_id = l.id
+            )
+          ORDER BY ABS(l.date - $2::date) ASC, l.id DESC
+          LIMIT 10`,
+        [statementLineId, line.date, line.currency, line.amount],
+    );
+    return res.rows.map((r) => {
+        const row = r as Record<string, unknown>;
+        const dayDiff = Number(row.dayDiff);
+        return {
+            ledgerTxnId: Number(row.ledgerTxnId),
+            txnType: row.txnType as string,
+            date: row.date as string,
+            amount: Number(row.amount),
+            currency: row.currency as string,
+            category: (row.category as string | null) ?? null,
+            notes: (row.notes as string | null) ?? null,
+            dayDiff,
+            confidence: dayDiff === 0 ? "high" : dayDiff <= 3 ? "medium" : "low",
+        };
+    });
 }
 
 export async function listFinancePayments(filter: { invoiceId?: number } = {}) {
@@ -278,12 +426,63 @@ export async function listFinancePayments(filter: { invoiceId?: number } = {}) {
 }
 
 // ── Expenses are natively exported above ───────────────────────────
-export async function getReconciliationSummary(_month?: string, _currency?: string) {
-    return { matched: 0, unmatched: 0, total: 0 };
+export async function getReconciliationSummary(month?: string, currency: string = "UGX") {
+    const res = await queryPostgres(
+        `SELECT
+           COUNT(*) FILTER (WHERE match_status = 'matched')::int   AS matched,
+           COUNT(*) FILTER (WHERE match_status = 'partial')::int    AS partial,
+           COUNT(*) FILTER (WHERE match_status = 'unmatched')::int  AS unmatched,
+           COUNT(*)::int                                            AS total,
+           COALESCE(SUM(ABS(amount)) FILTER (WHERE match_status = 'matched'), 0)  AS "matchedAmount",
+           COALESCE(SUM(ABS(amount)) FILTER (WHERE match_status <> 'matched'), 0) AS "unmatchedAmount"
+         FROM finance_statement_lines
+         WHERE ($1::text IS NULL OR date::text LIKE $1) AND currency = $2`,
+        [month ? `${month}%` : null, currency],
+    );
+    const r = (res.rows[0] ?? {}) as Record<string, unknown>;
+    return {
+        matched: Number(r.matched ?? 0),
+        partial: Number(r.partial ?? 0),
+        unmatched: Number(r.unmatched ?? 0),
+        total: Number(r.total ?? 0),
+        matchedAmount: Number(r.matchedAmount ?? 0),
+        unmatchedAmount: Number(r.unmatchedAmount ?? 0),
+        currency,
+        month: month ?? null,
+    };
 }
 
-export async function createStatementLineAsync(_actor: unknown, _input: unknown) {
-    return { id: 0 };
+export async function createStatementLineAsync(
+    actor: FinanceActor,
+    input: { accountType?: string; date: string; amount: number; currency?: string; reference?: string | null; description?: string | null },
+) {
+    const actorId = Number((actor as { id?: unknown })?.id) || null;
+    const res = await queryPostgres(
+        `INSERT INTO finance_statement_lines
+           (account_type, date, amount, currency, reference, description, match_status, matched_amount, created_by_user_id)
+         VALUES ($1, $2::date, $3, $4, $5, $6, 'unmatched', 0, $7)
+         RETURNING id,
+                   account_type       AS "accountType",
+                   date::text         AS date,
+                   amount,
+                   currency,
+                   reference,
+                   description,
+                   match_status       AS "matchStatus",
+                   matched_amount     AS "matchedAmount",
+                   created_by_user_id AS "createdBy",
+                   created_at         AS "createdAt"`,
+        [
+            input.accountType ?? "bank",
+            input.date,
+            Number(input.amount) || 0,
+            input.currency ?? "UGX",
+            input.reference ?? null,
+            input.description ?? null,
+            actorId,
+        ],
+    );
+    return res.rows[0];
 }
 
 // ── Budgets (now natively exported above) ────────────────────────────

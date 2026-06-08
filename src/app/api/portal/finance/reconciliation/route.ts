@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     const lines = await listStatementLines({ accountType, matchStatus, month });
     const unmatchedLedger = (await listFinanceLedgerTransactions({})).filter((t) => t.postedStatus === "posted");
-    const summary = month ? getReconciliationSummary(month, currency) : null;
+    const summary = month ? await getReconciliationSummary(month, currency) : null;
 
     return NextResponse.json({ lines, unmatchedLedger, summary });
 }
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         }
 
         if (action === "match") {
-            const match = matchStatementLineToLedger(
+            const match = await matchStatementLineToLedger(
                 actor,
                 Number(body.statementLineId),
                 Number(body.ledgerTxnId),
@@ -61,12 +61,12 @@ export async function POST(request: NextRequest) {
         }
 
         if (action === "unmatch") {
-            unmatchStatementLine(actor, Number(body.matchId));
+            await unmatchStatementLine(actor, Number(body.matchId));
             return NextResponse.json({ ok: true });
         }
 
         if (action === "auto_suggest") {
-            const suggestions = autoSuggestMatches(Number(body.statementLineId));
+            const suggestions = await autoSuggestMatches(Number(body.statementLineId));
             return NextResponse.json({ suggestions });
         }
 
