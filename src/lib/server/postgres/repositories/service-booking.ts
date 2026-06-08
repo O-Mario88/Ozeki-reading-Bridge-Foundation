@@ -1,4 +1,4 @@
-import { queryPostgres } from "@/lib/server/postgres/client";
+import { queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
 
 // Core Output Types
 export type ServiceCatalogRow = {
@@ -267,23 +267,31 @@ export async function listServiceCatalogPostgres(): Promise<ServiceCatalogRow[]>
 
 // 2. High-Level Booking Ingestion
 export async function createServiceRequestPostgres(payload: Record<string, unknown> & { cartItems: Array<Record<string, unknown>> }): Promise<number> {
-  await queryPostgres('BEGIN');
-  try {
+  // Run the request + its line items inside a single transaction on ONE
+  // dedicated client. Previously BEGIN/COMMIT/ROLLBACK were issued as separate
+  // queryPostgres() calls against the pool, so each could land on a different
+  // pooled connection — the "transaction" was illusory: a failed item INSERT
+  // could leave a committed request row with no items, and the ROLLBACK could
+  // target a connection that never saw the BEGIN. withPostgresClient guarantees
+  // one client and rolls back + releases it if the callback throws.
+  return withPostgresClient(async (client) => {
+    await client.query('BEGIN');
+
     // A. Generate Unique SRV Code
     const requestCode = `OZK-SRV-${new Date().getFullYear()}-${Math.random().toString().substring(2,8)}`;
 
     // B. Create the Request Row
-    const reqRes = await queryPostgres(
+    const reqRes = await client.query(
       `INSERT INTO service_requests (
         request_code, school_id, requester_name, requester_role, requester_phone, requester_email,
         estimated_total, required_deposit_amount, balance, status, admin_notes
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'Awaiting Deposit', $10) RETURNING id`,
       [
-        requestCode, 
-        payload.schoolId || null, 
-        payload.requesterName, 
-        payload.requesterRole, 
-        payload.requesterPhone, 
+        requestCode,
+        payload.schoolId || null,
+        payload.requesterName,
+        payload.requesterRole,
+        payload.requesterPhone,
         payload.requesterEmail,
         payload.estimatedTotal,
         payload.requiredDepositAmount,
@@ -295,9 +303,9 @@ export async function createServiceRequestPostgres(payload: Record<string, unkno
 
     // C. Map Cart Items into schema
     for (const item of payload.cartItems) {
-      await queryPostgres(
+      await client.query(
         `INSERT INTO service_request_items (
-          service_request_id, service_id, quantity, unit_price, total_price, 
+          service_request_id, service_id, quantity, unit_price, total_price,
           required_deposit_amount, service_details_json
         ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
@@ -312,12 +320,9 @@ export async function createServiceRequestPostgres(payload: Record<string, unkno
       );
     }
 
-    await queryPostgres('COMMIT');
+    await client.query('COMMIT');
     return serviceRequestId;
-  } catch (e) {
-    await queryPostgres('ROLLBACK');
-    throw e;
-  }
+  });
 }
 
 // 3. Fintech Payment Status Updater
