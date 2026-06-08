@@ -4,6 +4,32 @@ import { PORTAL_SESSION_COOKIE } from "@/lib/auth";
 import { getPortalUserFromSession, logAuditEvent } from "@/services/dataService";
 import { auditLog } from "@/lib/server/audit/log";
 import { getGoogleWorkspaceDiagnostics } from "@/lib/google-workspace";
+import { getSettingPostgres, setSettingPostgres } from "@/lib/server/postgres/repositories/settings";
+
+const TRAINING_SETTINGS_KEY = "training_settings";
+
+type TrainingSettings = {
+    defaultMeetingsRecorded: boolean;
+    aiNotesEnabled: boolean;
+    aiModel: string;
+};
+
+const TRAINING_SETTINGS_DEFAULTS: TrainingSettings = {
+    defaultMeetingsRecorded: true,
+    aiNotesEnabled: true,
+    aiModel: "gpt-4o-mini",
+};
+
+function normalizeTrainingSettings(body: Record<string, unknown>): TrainingSettings {
+    const aiModel = typeof body.aiModel === "string" && body.aiModel.trim()
+        ? body.aiModel.trim()
+        : TRAINING_SETTINGS_DEFAULTS.aiModel;
+    return {
+        defaultMeetingsRecorded: Boolean(body.defaultMeetingsRecorded),
+        aiNotesEnabled: Boolean(body.aiNotesEnabled),
+        aiModel,
+    };
+}
 
 async function requireAuth() {
     const cookieStore = await cookies();
@@ -25,12 +51,16 @@ export async function GET() {
         }
 
         const googleStatus = await getGoogleWorkspaceDiagnostics();
+        const saved = await getSettingPostgres<TrainingSettings>(
+            TRAINING_SETTINGS_KEY,
+            TRAINING_SETTINGS_DEFAULTS,
+        );
 
         return NextResponse.json({
             googleConnected: googleStatus.googleConnected,
-            defaultMeetingsRecorded: true,
-            aiNotesEnabled: true,
-            aiModel: "gpt-4o-mini",
+            defaultMeetingsRecorded: saved.defaultMeetingsRecorded,
+            aiNotesEnabled: saved.aiNotesEnabled,
+            aiModel: saved.aiModel,
             googleStatus,
         });
     } catch (_error) {
@@ -49,6 +79,18 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
+        const settings = normalizeTrainingSettings(body ?? {});
+
+        // Persist the configuration. Previously this handler only wrote audit
+        // entries and returned { success: true } WITHOUT storing anything, so
+        // admins believed settings were saved while nothing changed.
+        await setSettingPostgres(
+            TRAINING_SETTINGS_KEY,
+            JSON.stringify(settings),
+            "json",
+            user.id,
+            "Training / Google Workspace / AI configuration",
+        );
 
         logAuditEvent(
             user.id,
@@ -57,7 +99,7 @@ export async function POST(req: NextRequest) {
             "system_settings",
             "training",
             null,
-            JSON.stringify(body),
+            JSON.stringify(settings),
             "Updated Google Workspace and AI configuration.",
         );
 
@@ -65,11 +107,11 @@ export async function POST(req: NextRequest) {
             actor: user,
             action: "update",
             targetTable: "system_settings",
-            after: body,
+            after: settings,
             detail: "Updated training / Google Workspace / AI configuration",
             request: req,
         });
-        return NextResponse.json({ success: true, settings: body });
+        return NextResponse.json({ success: true, settings });
     } catch (_error) {
         return new NextResponse("Internal Error", { status: 500 });
     }
