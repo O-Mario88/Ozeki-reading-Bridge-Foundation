@@ -687,7 +687,7 @@ export {
 
 export async function listGraduationQueueAsync(filters?: unknown) {
     const { listGraduationQueueAsync: fn } = await import("@/lib/db-api");
-    return fn(filters);
+    return fn(filters as { limit?: number; includeSnoozed?: boolean } | undefined);
 }
 
 export async function listGraduationReviewSupervisorsAsync() {
@@ -788,9 +788,19 @@ export async function getSchoolGraduationEligibilityAsync(schoolId: number, _opt
     return fn(schoolId);
 }
 
-export async function reviewSchoolGraduationAsync(..._args: unknown[]) {
+export async function reviewSchoolGraduationAsync(
+    input: {
+        schoolId: number;
+        action: "confirm_graduation" | "keep_supporting" | "needs_review";
+        reason?: string | null;
+        snoozeDays?: number | null;
+        assignedSupervisorUserId?: number | null;
+        checklistAnswers?: Record<string, boolean> | null;
+    },
+    actor: { id: number },
+) {
     const { reviewSchoolGraduationAsync: fn } = await import("@/lib/db-api");
-    return fn(..._args as [never, never, never]);
+    return fn(input, actor);
 }
 
 // ── Evidence ─────────────────────────────────────────────────────────

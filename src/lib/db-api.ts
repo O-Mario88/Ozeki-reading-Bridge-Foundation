@@ -139,8 +139,60 @@ export async function createSchoolDirectoryRecord(input: Record<string, unknown>
   return { id, ...input } as Record<string, unknown> & { id: number };
 }
 
-export async function getSchoolGraduationEligibilityAsync(_schoolId: number, _options?: unknown) {
-  return null as unknown as { isEligible: boolean; [key: string]: unknown } | null;
+function safeJsonParse<T>(raw: unknown, fallback: T): T {
+  if (typeof raw !== "string" || !raw.trim()) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+export async function getSchoolGraduationEligibilityAsync(schoolId: number, _options?: unknown) {
+  // Returns the school's eligibility snapshot joined with its review-workflow
+  // state. The eligibility cache (is_eligible / scorecard) is populated by a
+  // separate compute step that is not yet built, so isEligible defaults to
+  // false until that exists — but the workflow state IS real and reflects any
+  // saved review decision. Returns null only when the school does not exist
+  // (the route maps that to 404).
+  const res = await queryPostgres(
+    `SELECT s.id                            AS "schoolId",
+            s.name                          AS "schoolName",
+            s.district                      AS "district",
+            w.state                         AS "workflowState",
+            w.snoozed_until                 AS "snoozedUntil",
+            w.assigned_supervisor_user_id   AS "assignedSupervisorUserId",
+            w.reason                        AS "reviewReason",
+            w.updated_at                    AS "reviewedAt",
+            w.checklist_answers_json        AS "checklistAnswersJson",
+            c.is_eligible                   AS "isEligibleRaw",
+            c.scorecard_json                AS "scorecardJson",
+            c.missing_data_json             AS "missingDataJson",
+            c.computed_at                   AS "computedAt"
+       FROM schools_directory s
+       LEFT JOIN school_graduation_workflow w           ON w.school_id = s.id
+       LEFT JOIN school_graduation_eligibility_cache c  ON c.school_id = s.id
+      WHERE s.id = $1
+      LIMIT 1`,
+    [schoolId],
+  );
+  const row = res.rows[0] as Record<string, unknown> | undefined;
+  if (!row) return null;
+  return {
+    schoolId: Number(row.schoolId),
+    schoolName: row.schoolName as string,
+    district: row.district as string,
+    isEligible: row.isEligibleRaw === true,
+    workflowState: (row.workflowState as string) ?? "pending",
+    snoozedUntil: row.snoozedUntil ?? null,
+    assignedSupervisorUserId: row.assignedSupervisorUserId ?? null,
+    reviewReason: row.reviewReason ?? null,
+    reviewedAt: row.reviewedAt ?? null,
+    checklistAnswers: safeJsonParse<Record<string, boolean>>(row.checklistAnswersJson, {}),
+    scorecard: safeJsonParse<Record<string, unknown>>(row.scorecardJson, {}),
+    missingData: safeJsonParse<unknown[]>(row.missingDataJson, []),
+    computedAt: row.computedAt ?? null,
+  } as { isEligible: boolean; [key: string]: unknown };
 }
 
 export async function refreshSchoolGraduationEligibilityCacheAsync(_schoolId?: number) {
@@ -267,16 +319,121 @@ export async function updateGraduationSettingsAsync(settings: unknown, _actor?: 
   );
 }
 
-export async function listGraduationQueueAsync(_filters?: unknown) {
-  return { eligibleCount: 0, updatedAt: new Date().toISOString(), items: [] as Array<{ schoolId: number; schoolName: string; district: string; [key: string]: unknown }> };
+export async function listGraduationQueueAsync(filters?: { limit?: number; includeSnoozed?: boolean }) {
+  // Lists schools the eligibility cache marks eligible and that have not yet
+  // been graduated. The cache is populated by a not-yet-built compute step, so
+  // this returns an honest empty queue until that exists (rather than the old
+  // hardcoded zero). Wrapped so a fresh/unbootstrapped DB degrades to empty
+  // instead of 500-ing the dashboard widget.
+  const limit = Math.max(1, Math.min(1000, Math.round(Number(filters?.limit ?? 200) || 200)));
+  const includeSnoozed = filters?.includeSnoozed === true;
+  try {
+    const res = await queryPostgres(
+      `SELECT s.id            AS "schoolId",
+              s.name          AS "schoolName",
+              s.district      AS "district",
+              c.computed_at   AS "computedAt",
+              w.state         AS "workflowState",
+              w.snoozed_until AS "snoozedUntil"
+         FROM school_graduation_eligibility_cache c
+         JOIN schools_directory s                ON s.id = c.school_id
+         LEFT JOIN school_graduation_workflow w  ON w.school_id = c.school_id
+        WHERE c.is_eligible = TRUE
+          AND (w.state IS NULL OR w.state <> 'graduated')
+          AND (${includeSnoozed ? "TRUE" : "w.snoozed_until IS NULL OR w.snoozed_until < CURRENT_DATE"})
+        ORDER BY c.computed_at DESC
+        LIMIT $1`,
+      [limit],
+    );
+    const items = res.rows.map((r) => {
+      const row = r as Record<string, unknown>;
+      return {
+        schoolId: Number(row.schoolId),
+        schoolName: row.schoolName as string,
+        district: row.district as string,
+        workflowState: (row.workflowState as string) ?? "pending",
+        snoozedUntil: row.snoozedUntil ?? null,
+        computedAt: row.computedAt ?? null,
+      };
+    });
+    return { eligibleCount: items.length, updatedAt: new Date().toISOString(), items };
+  } catch (error) {
+    console.error("[graduation/queue] failed to read eligibility cache", error);
+    return { eligibleCount: 0, updatedAt: new Date().toISOString(), items: [] as Array<{ schoolId: number; schoolName: string; district: string; [key: string]: unknown }> };
+  }
 }
 
 export async function listGraduationReviewSupervisorsAsync() {
-  return [];
+  // Portal users who can be assigned to review/own a graduation decision.
+  const res = await queryPostgres(
+    `SELECT id, full_name AS "fullName", role
+       FROM portal_users
+      WHERE is_supervisor = TRUE OR is_admin = TRUE OR is_superadmin = TRUE
+      ORDER BY full_name ASC`,
+    [],
+  );
+  return res.rows.map((r) => {
+    const row = r as Record<string, unknown>;
+    return { id: Number(row.id), fullName: row.fullName as string, role: row.role as string };
+  });
 }
 
-export async function reviewSchoolGraduationAsync(..._args: unknown[]) {
-  return { programStatus: 'monitoring', workflowState: 'monitoring' } as Record<string, unknown>;
+const GRADUATION_ACTION_TO_STATE: Record<string, string> = {
+  confirm_graduation: "graduated",
+  keep_supporting: "kept_supporting",
+  needs_review: "needs_review",
+};
+
+export async function reviewSchoolGraduationAsync(
+  input: {
+    schoolId: number;
+    action: "confirm_graduation" | "keep_supporting" | "needs_review";
+    reason?: string | null;
+    snoozeDays?: number | null;
+    assignedSupervisorUserId?: number | null;
+    checklistAnswers?: Record<string, boolean> | null;
+  },
+  actor: { id: number },
+) {
+  // Persist the review decision. Previously this returned a hardcoded status
+  // WITHOUT writing anything, so every graduation decision was silently lost.
+  const state = GRADUATION_ACTION_TO_STATE[input.action] ?? "needs_review";
+  const checklistJson = input.checklistAnswers ? JSON.stringify(input.checklistAnswers) : null;
+  const snoozeDays = input.snoozeDays != null && Number.isFinite(Number(input.snoozeDays))
+    ? Math.trunc(Number(input.snoozeDays))
+    : null;
+
+  await queryPostgres(
+    `INSERT INTO school_graduation_workflow
+        (school_id, state, snoozed_until, assigned_supervisor_user_id, reason,
+         updated_by_user_id, updated_at,
+         checklist_answers_json, checklist_completed_at, checklist_completed_by_user_id)
+     VALUES (
+        $1, $2,
+        CASE WHEN $3::int IS NOT NULL THEN CURRENT_DATE + $3::int ELSE NULL END,
+        $4, $5, $6, NOW(),
+        $7,
+        CASE WHEN $7 IS NOT NULL THEN NOW() ELSE NULL END,
+        CASE WHEN $7 IS NOT NULL THEN $6 ELSE NULL END)
+     ON CONFLICT (school_id) DO UPDATE SET
+        state                          = EXCLUDED.state,
+        snoozed_until                  = EXCLUDED.snoozed_until,
+        assigned_supervisor_user_id    = EXCLUDED.assigned_supervisor_user_id,
+        reason                         = EXCLUDED.reason,
+        updated_by_user_id             = EXCLUDED.updated_by_user_id,
+        updated_at                     = NOW(),
+        checklist_answers_json         = COALESCE(EXCLUDED.checklist_answers_json, school_graduation_workflow.checklist_answers_json),
+        checklist_completed_at         = COALESCE(EXCLUDED.checklist_completed_at, school_graduation_workflow.checklist_completed_at),
+        checklist_completed_by_user_id = COALESCE(EXCLUDED.checklist_completed_by_user_id, school_graduation_workflow.checklist_completed_by_user_id)`,
+    [input.schoolId, state, snoozeDays, input.assignedSupervisorUserId ?? null, input.reason ?? null, actor.id, checklistJson],
+  );
+
+  // Return the freshly-persisted eligibility/workflow snapshot.
+  return (await getSchoolGraduationEligibilityAsync(input.schoolId)) ?? {
+    schoolId: input.schoolId,
+    isEligible: false,
+    workflowState: state,
+  };
 }
 
 // ── Support request stubs ────────────────────────────────────────────
