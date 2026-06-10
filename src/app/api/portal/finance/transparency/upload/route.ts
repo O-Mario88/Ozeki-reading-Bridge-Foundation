@@ -51,7 +51,7 @@ export async function POST(request: Request) {
         const buffer = Buffer.from(await file.arrayBuffer());
         await fs.writeFile(storedPath, buffer);
 
-        const id = uploadAuditedStatement(
+        const id = await uploadAuditedStatement(
             auth.actor,
             {
                 fy,

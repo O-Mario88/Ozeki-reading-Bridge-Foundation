@@ -11,7 +11,7 @@ export async function POST() {
   }
 
   try {
-    const summary = runFinanceAuditSweep(auth.actor);
+    const summary = await runFinanceAuditSweep(auth.actor);
     return NextResponse.json({ summary });
   } catch (error) {
     return NextResponse.json(

@@ -87,26 +87,26 @@ export async function POST(request: Request) {
                 const id = parsePositiveInt(payload.id);
                 const confirmation = String(payload.confirmation ?? "");
                 if (!id) throw new Error("Invalid snapshot id");
-                publishPublicSnapshot(auth.actor, id, confirmation);
+                await publishPublicSnapshot(auth.actor, id, confirmation);
                 return NextResponse.json({ success: true });
             }
             case "archive_snapshot": {
                 const id = parsePositiveInt(payload.id);
                 if (!id) throw new Error("Invalid snapshot id");
-                archivePublicSnapshot(auth.actor, id);
+                await archivePublicSnapshot(auth.actor, id);
                 return NextResponse.json({ success: true });
             }
             case "publish_audited": {
                 const id = parsePositiveInt(payload.id);
                 const confirmation = String(payload.confirmation ?? "");
                 if (!id) throw new Error("Invalid audited statement id");
-                publishAuditedStatement(auth.actor, id, confirmation);
+                await publishAuditedStatement(auth.actor, id, confirmation);
                 return NextResponse.json({ success: true });
             }
             case "archive_audited": {
                 const id = parsePositiveInt(payload.id);
                 if (!id) throw new Error("Invalid audited statement id");
-                archiveAuditedStatement(auth.actor, id);
+                await archiveAuditedStatement(auth.actor, id);
                 return NextResponse.json({ success: true });
             }
             default:
