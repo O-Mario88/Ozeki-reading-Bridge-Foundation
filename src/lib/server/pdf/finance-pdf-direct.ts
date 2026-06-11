@@ -16,7 +16,9 @@
  *   │──────────────────────────────────────────────│
  *   │  Totals (subtotal, paid, balance)            │
  *   │──────────────────────────────────────────────│
- *   │  Notes                │  Signature           │
+ *   │  Payment Details      │  Signature           │
+ *   │──────────────────────────────────────────────│
+ *   │  Notes (full width, below)                   │
  *   └──────────────────────────────────────────────┘
  */
 import { PDFDocument, PDFFont, PDFImage, PDFPage, rgb, StandardFonts } from "pdf-lib";
@@ -443,7 +445,8 @@ function drawTotals(
 }
 
 /**
- * Footer — notes on left, signature on right.
+ * Footer — payment details (left) + signature (right), with any notes in a
+ * full-width row below both.
  */
 async function drawFooter(
   page: PDFPage,
@@ -471,10 +474,6 @@ async function drawFooter(
     "Ozeki Reading Bridge Foundation",
     "Email: support@ozekiread.org",
   ];
-  if (notes && notes.trim()) {
-    paymentLines.push(""); // blank line
-    paymentLines.push(notes);
-  }
   let nY = curY - 22;
   for (const line of paymentLines) {
     if (line === "") { nY -= 4; continue; }
@@ -506,7 +505,25 @@ async function drawFooter(
   });
   drawText(page, "Authorized Signatory", sigAreaX + 40, dashY - 12, font, 7.5, MUTED);
 
-  return dashY - 20;
+  // Notes — full-width row BELOW the payment details + signature row.
+  let endY = dashY - 20;
+  if (notes && notes.trim()) {
+    let ny = endY - 6;
+    drawText(page, "NOTES", ML, ny, fontBold, 8, BLACK);
+    ny -= 14;
+    for (const rawLine of notes.split(/\r?\n/)) {
+      if (ny < 84) break; // keep clear of the bottom branding bar
+      if (!rawLine.trim()) { ny -= 8; continue; }
+      for (const wl of wrapText(rawLine, font, 8.5, CW - 12)) {
+        if (ny < 84) break;
+        drawText(page, wl, ML, ny, font, 8.5, MUTED);
+        ny -= 12;
+      }
+    }
+    endY = ny - 4;
+  }
+
+  return endY;
 }
 
 /**
@@ -636,8 +653,8 @@ export async function renderInvoicePdf(
     { label: `Total (${invoice.currency}):`, value: fmtMoney(invoice.currency, invoice.total), bold: true, topBorder: true },
   ]);
 
-  // 6. Footer (payment details + signature)
-  await drawFooter(page, afterTotals - 10, font, fontBold, doc);
+  // 6. Footer (payment details + signature, then notes in a row below)
+  await drawFooter(page, afterTotals - 10, font, fontBold, doc, invoice.notes);
 
   // 7. Bottom bar
   drawBottomBar(page, font, "Ozeki Financial Systems - Verified Invoice Document");
@@ -757,9 +774,11 @@ export async function renderReceiptPdf(
     curY = drawTable(page, curY, font, fontBold, allocHeaders, allocRows, [0.65, 0.35], new Set([1]));
   }
 
-  // 6. Footer (notes + signature)
-  const footerNote = "Thank you for supporting Literacy in Uganda.";
-  await drawFooter(page, curY - 10, font, fontBold, doc, footerNote);
+  // 6. Footer (payment details + signature). The receipt's payment details
+  //    already appear in "BEING PAYMENT FOR", so no notes row here — the
+  //    thank-you tagline is drawn centered below instead of under a NOTES head.
+  const footerEndY = await drawFooter(page, curY - 10, font, fontBold, doc);
+  drawCenteredText(page, font, "Thank you for supporting Literacy in Uganda.", Math.max(footerEndY - 6, 84), 8, MUTED);
 
   // 7. Bottom bar
   drawBottomBar(page, font, "Ozeki Financial Systems - Official Receipt Document");
