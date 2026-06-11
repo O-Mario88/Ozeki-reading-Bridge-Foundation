@@ -1,4 +1,7 @@
 import crypto from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { getRuntimeDataDir } from "@/lib/runtime-paths";
 import { createFinanceIncomeBreakdownZero, FINANCE_INCOME_CATEGORIES, normalizeFinanceIncomeCategory } from "@/lib/finance-categories";
 import { getDefaultFinanceFromEmail, resolveFinanceFromEmail } from "@/lib/finance-email";
 import { queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
@@ -276,6 +279,91 @@ export async function listFinanceFilesBySourcePostgres(
     [sourceType, sourceId],
   );
   return result.rows.map((row) => mapFinanceFileRecord(row as Record<string, unknown>));
+}
+
+const MIME_EXTENSION: Record<string, string> = {
+  "application/pdf": ".pdf",
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+};
+
+/**
+ * Persist an uploaded finance file: bytes to disk under the runtime data dir
+ * (same model as the audited-statement upload), metadata to finance_files.
+ * Returns the full FinanceFileRecord including a signed download URL.
+ */
+export async function createFinanceFileRecord(
+  input: {
+    sourceType: string;
+    sourceId: number;
+    fileName: string;
+    bytes: Buffer;
+    mimeType: string;
+  },
+  actor?: { id?: number | string } | null,
+): Promise<FinanceFileRecord> {
+  const actorId = Number(actor?.id);
+  if (!Number.isFinite(actorId) || actorId <= 0) {
+    throw new Error("An authenticated actor is required to store finance files.");
+  }
+  const mime = input.mimeType || "application/octet-stream";
+  const ext = MIME_EXTENSION[mime.toLowerCase()] || path.extname(input.fileName) || ".bin";
+  const folder = path.join(getRuntimeDataDir(), "finance", "files");
+  await fs.mkdir(folder, { recursive: true });
+  const storedPath = path.join(folder, crypto.randomBytes(16).toString("hex") + ext);
+  await fs.writeFile(storedPath, input.bytes);
+
+  try {
+    const result = await queryPostgres(
+      `INSERT INTO finance_files (source_type, source_id, file_name, stored_path, mime_type, size_bytes, uploaded_by_user_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id`,
+      [input.sourceType, input.sourceId, input.fileName, storedPath, mime, input.bytes.byteLength, actorId],
+    );
+    return getFinanceFileByIdPostgres(Number((result.rows[0] as { id: number }).id));
+  } catch (error) {
+    // Don't leave orphaned bytes on disk if the metadata insert fails.
+    await fs.unlink(storedPath).catch(() => undefined);
+    throw error;
+  }
+}
+
+/** Load a stored finance file's bytes + metadata for the download route. */
+export async function loadFinanceFileForDownload(id: string | number) {
+  const file = await getFinanceFileByIdPostgres(Number(id));
+  const bytes = await fs.readFile(file.storedPath);
+  return { bytes, mimeType: file.mimeType, fileName: file.fileName };
+}
+
+/**
+ * Verify a signed finance-file URL produced by getSignedFinanceFileUrl:
+ * HMAC-SHA256 over "fileId:expires" with FINANCE_FILE_SECRET, plus an
+ * expiry check. Timing-safe comparison.
+ */
+export function verifyFinanceFileSignature(
+  id: string | number | null,
+  expires: string | number | null,
+  sig: string | null,
+): boolean {
+  const fileId = Number(id);
+  const expiresAt = Number(expires);
+  if (!Number.isFinite(fileId) || !Number.isFinite(expiresAt) || !sig) {
+    return false;
+  }
+  if (expiresAt < Math.floor(Date.now() / 1000)) {
+    return false;
+  }
+  const expected = crypto
+    .createHmac("sha256", FINANCE_FILE_SECRET)
+    .update(`${fileId}:${expiresAt}`)
+    .digest("hex");
+  const provided = String(sig);
+  if (provided.length !== expected.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(Buffer.from(expected, "utf8"), Buffer.from(provided, "utf8"));
 }
 
 function mapFinanceContactRecord(row: Record<string, unknown>): FinanceContactRecord {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireFinanceSuperAdmin } from "@/app/api/portal/finance/_utils";
 import { logger } from "@/lib/logger";
 import { listFinancePublicSnapshots, listFinanceAuditedStatements } from "@/services/financeService";
+import { getRuntimeDataDir } from "@/lib/runtime-paths";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -59,8 +60,12 @@ export async function GET(request: Request) {
       return new NextResponse("File path missing", { status: 404 });
     }
 
+    // Confine downloads to the runtime data dir's finance/ folder. The old
+    // check hardcoded cwd-relative "data/finance", which 403'd every file
+    // whenever APP_DATA_DIR or the /tmp fallback was in effect.
     const fullPath = path.resolve(storedPath);
-    if (!fullPath.startsWith(path.resolve("data/finance"))) {
+    const financeRoot = path.join(getRuntimeDataDir(), "finance") + path.sep;
+    if (!fullPath.startsWith(financeRoot)) {
       return new NextResponse("Invalid file path", { status: 403 });
     }
 

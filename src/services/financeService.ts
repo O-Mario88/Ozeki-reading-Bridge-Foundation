@@ -221,18 +221,10 @@ export async function listInvoiceAllocations(invoiceId: number) {
 
 // ── Contacts (now natively exported above) ───────────────────────────
 
-// ── File operations ──────────────────────────────────────────────────
-export async function createFinanceFileRecord(_input: unknown, _actor?: unknown) {
-    return { id: 0, storedPath: '', fileName: '', mimeType: 'application/octet-stream' };
-}
-
-export async function loadFinanceFileForDownload(_id: string | number) {
-    return { bytes: Buffer.alloc(0), mimeType: "application/octet-stream", fileName: "unknown" };
-}
-
-export function verifyFinanceFileSignature(_id: string | number | null, _expires: string | number | null, _sig: string | null): boolean {
-    return false;
-}
+// ── File operations (now natively exported above, from finance.ts) ───
+// createFinanceFileRecord / loadFinanceFileForDownload /
+// verifyFinanceFileSignature live next to the finance_files queries and
+// the FINANCE_FILE_SECRET signing helper.
 
 // ── Reconciliation ───────────────────────────────────────────────────
 // Link bank/cash/mobile-money statement lines to posted ledger transactions
@@ -488,42 +480,450 @@ export async function createStatementLineAsync(
 // ── Budgets (now natively exported above) ────────────────────────────
 
 // ── Settings ─────────────────────────────────────────────────────────
-export async function updateFinanceSettingsAsync(_input: unknown, _actor?: unknown) {
-    throw new Error("updateFinanceSettingsAsync: not yet migrated to PostgreSQL");
+export async function updateFinanceSettingsAsync(
+    input: Partial<{
+        fromEmail: string | null;
+        ccFinanceEmail: string | null;
+        invoicePrefix: string;
+        receiptPrefix: string;
+        expensePrefix: string;
+        categorySubcategories: Record<string, string[]>;
+        invoiceEmailTemplate: string;
+        receiptEmailTemplate: string;
+        paymentInstructions: string;
+        cashThresholdUgx: number;
+        cashThresholdUsd: number;
+        backdateDaysLimit: number;
+        allowReceiptMismatchOverride: boolean;
+        allowReceiptReuseOverride: boolean;
+        outlierMultiplier: number;
+    }>,
+    _actor?: FinanceActor,
+) {
+    // Merge the partial update over the current settings (which fall back to
+    // defaults when the singleton row doesn't exist yet), then upsert the
+    // CHECK(id = 1) singleton row. Returns the freshly-read settings so the
+    // route responds with what is actually persisted.
+    const { getFinanceSettingsPostgres } = await import("@/lib/server/postgres/repositories/finance");
+    const current = await getFinanceSettingsPostgres();
+    const merged = { ...current, ...input };
+    await queryPostgres(
+        `INSERT INTO finance_settings (
+           id, from_email, cc_finance_email, invoice_prefix, receipt_prefix, expense_prefix,
+           subcategories_json, invoice_email_template, receipt_email_template, payment_instructions,
+           cash_threshold_ugx, cash_threshold_usd, backdate_days_limit,
+           allow_receipt_mismatch_override, allow_receipt_reuse_override, outlier_multiplier, updated_at
+         ) VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
+         ON CONFLICT (id) DO UPDATE SET
+           from_email = EXCLUDED.from_email,
+           cc_finance_email = EXCLUDED.cc_finance_email,
+           invoice_prefix = EXCLUDED.invoice_prefix,
+           receipt_prefix = EXCLUDED.receipt_prefix,
+           expense_prefix = EXCLUDED.expense_prefix,
+           subcategories_json = EXCLUDED.subcategories_json,
+           invoice_email_template = EXCLUDED.invoice_email_template,
+           receipt_email_template = EXCLUDED.receipt_email_template,
+           payment_instructions = EXCLUDED.payment_instructions,
+           cash_threshold_ugx = EXCLUDED.cash_threshold_ugx,
+           cash_threshold_usd = EXCLUDED.cash_threshold_usd,
+           backdate_days_limit = EXCLUDED.backdate_days_limit,
+           allow_receipt_mismatch_override = EXCLUDED.allow_receipt_mismatch_override,
+           allow_receipt_reuse_override = EXCLUDED.allow_receipt_reuse_override,
+           outlier_multiplier = EXCLUDED.outlier_multiplier,
+           updated_at = NOW()`,
+        [
+            merged.fromEmail ?? null,
+            merged.ccFinanceEmail ?? null,
+            merged.invoicePrefix,
+            merged.receiptPrefix,
+            merged.expensePrefix,
+            JSON.stringify(merged.categorySubcategories ?? {}),
+            merged.invoiceEmailTemplate,
+            merged.receiptEmailTemplate,
+            merged.paymentInstructions ?? "",
+            Number(merged.cashThresholdUgx) || 0,
+            Number(merged.cashThresholdUsd) || 0,
+            Math.max(0, Math.trunc(Number(merged.backdateDaysLimit) || 0)),
+            merged.allowReceiptMismatchOverride ? 1 : 0,
+            merged.allowReceiptReuseOverride ? 1 : 0,
+            Number(merged.outlierMultiplier) > 0 ? Number(merged.outlierMultiplier) : 3,
+        ],
+    );
+    return getFinanceSettingsPostgres();
 }
 
 // ── Audit sweep ──────────────────────────────────────────────────────
-export async function runFinanceAuditSweep(_monthOrActor: unknown, _extra?: unknown) {
-    return { exceptionsCreated: 0 };
+// Rule-based exception generation over expenses. Each rule is an
+// INSERT…SELECT with a NOT EXISTS dedup on (entity_type, entity_id,
+// rule_code), so re-running the sweep is idempotent and never re-flags an
+// entity that was already resolved or overridden. Thresholds come from
+// finance_settings (cash thresholds, backdate limit, outlier multiplier).
+export async function runFinanceAuditSweep(actor: FinanceActor, _extra?: unknown) {
+    const actorId = Number((actor as { id?: unknown })?.id) || null;
+    const { getFinanceSettingsPostgres } = await import("@/lib/server/postgres/repositories/finance");
+    const settings = await getFinanceSettingsPostgres();
+
+    const DEDUP = `NOT EXISTS (
+        SELECT 1 FROM finance_audit_exceptions x
+        WHERE x.entity_type = 'expense' AND x.entity_id = e.id AND x.rule_code = $1
+    )`;
+
+    let exceptionsCreated = 0;
+    const byRule: Record<string, number> = {};
+    const run = async (ruleCode: string, sql: string, params: unknown[]) => {
+        const res = await queryPostgres(sql, [ruleCode, ...params]);
+        const created = res.rowCount ?? 0;
+        byRule[ruleCode] = created;
+        exceptionsCreated += created;
+    };
+
+    // 1. Cash expense above the configured threshold for its currency.
+    // (Thresholds are passed twice — numeric for the comparison, text for the
+    // message — because Postgres assigns exactly one type per parameter.)
+    await run(
+        "CASH_OVER_THRESHOLD",
+        `INSERT INTO finance_audit_exceptions (entity_type, entity_id, severity, rule_code, message, amount, currency, created_by_user_id)
+         SELECT 'expense', e.id, 'high', $1,
+                'Cash expense ' || e.expense_number || ' of ' || e.currency || ' ' || e.amount || ' exceeds the cash threshold (' ||
+                CASE WHEN e.currency = 'USD' THEN $6 ELSE $5 END || ').',
+                e.amount, e.currency, $4
+         FROM finance_expenses e
+         WHERE e.status IN ('submitted', 'posted')
+           AND e.payment_method = 'cash'
+           AND ((e.currency = 'UGX' AND e.amount > $2) OR (e.currency = 'USD' AND e.amount > $3))
+           AND ${DEDUP}`,
+        [
+            settings.cashThresholdUgx,
+            settings.cashThresholdUsd,
+            actorId,
+            String(settings.cashThresholdUgx),
+            String(settings.cashThresholdUsd),
+        ],
+    );
+
+    // 2. Posted expense with no receipt evidence on file.
+    await run(
+        "MISSING_RECEIPT_EVIDENCE",
+        `INSERT INTO finance_audit_exceptions (entity_type, entity_id, severity, rule_code, message, amount, currency, created_by_user_id)
+         SELECT 'expense', e.id, 'high', $1,
+                'Posted expense ' || e.expense_number || ' (' || e.currency || ' ' || e.amount || ') has no receipt evidence attached.',
+                e.amount, e.currency, $2
+         FROM finance_expenses e
+         WHERE e.status = 'posted'
+           AND NOT EXISTS (SELECT 1 FROM finance_expense_receipts r WHERE r.expense_id = e.id)
+           AND ${DEDUP}`,
+        [actorId],
+    );
+
+    // 3. Receipt evidence totals that disagree with the expense amount.
+    await run(
+        "RECEIPT_AMOUNT_MISMATCH",
+        `INSERT INTO finance_audit_exceptions (entity_type, entity_id, severity, rule_code, message, amount, currency, created_by_user_id)
+         SELECT 'expense', e.id, 'medium', $1,
+                'Expense ' || e.expense_number || ' amount (' || e.currency || ' ' || e.amount || ') does not match its receipt total (' || r.total || ').',
+                e.amount, e.currency, $2
+         FROM finance_expenses e
+         JOIN (
+            SELECT expense_id, SUM(receipt_amount) AS total
+            FROM finance_expense_receipts
+            GROUP BY expense_id
+         ) r ON r.expense_id = e.id
+         WHERE e.status IN ('submitted', 'posted')
+           AND ABS(r.total - e.amount) > 0.01
+           AND ${DEDUP}`,
+        [actorId],
+    );
+
+    // 4. Entry recorded long after the expense date (backdating).
+    await run(
+        "BACKDATED_ENTRY",
+        `INSERT INTO finance_audit_exceptions (entity_type, entity_id, severity, rule_code, message, amount, currency, created_by_user_id)
+         SELECT 'expense', e.id, 'medium', $1,
+                'Expense ' || e.expense_number || ' was recorded ' || (e.created_at::date - e.date) || ' days after its expense date (limit ' || $4 || ').',
+                e.amount, e.currency, $3
+         FROM finance_expenses e
+         WHERE e.status IN ('submitted', 'posted')
+           AND e.created_at::date - e.date > $2
+           AND ${DEDUP}`,
+        [settings.backdateDaysLimit, actorId, String(settings.backdateDaysLimit)],
+    );
+
+    // 5. Amount far above the norm for its subcategory (needs >= 3 peers).
+    await run(
+        "AMOUNT_OUTLIER",
+        `INSERT INTO finance_audit_exceptions (entity_type, entity_id, severity, rule_code, message, amount, currency, created_by_user_id)
+         SELECT 'expense', e.id, 'low', $1,
+                'Expense ' || e.expense_number || ' (' || e.currency || ' ' || e.amount || ') is more than ' || $4 || 'x the average for "' || COALESCE(e.subcategory, 'Uncategorized') || '".',
+                e.amount, e.currency, $3
+         FROM finance_expenses e
+         JOIN (
+            SELECT COALESCE(subcategory, '') AS sub, currency, AVG(amount) AS avg_amount, COUNT(*) AS n
+            FROM finance_expenses
+            WHERE status = 'posted'
+            GROUP BY COALESCE(subcategory, ''), currency
+         ) stats ON stats.sub = COALESCE(e.subcategory, '') AND stats.currency = e.currency
+         WHERE e.status = 'posted'
+           AND stats.n >= 3
+           AND e.amount > stats.avg_amount * $2
+           AND ${DEDUP}`,
+        [settings.outlierMultiplier, actorId, String(settings.outlierMultiplier)],
+    );
+
+    const checkedRes = await queryPostgres(
+        `SELECT COUNT(*)::int AS n FROM finance_expenses WHERE status IN ('submitted', 'posted')`,
+    );
+    const checkedExpenses = Number((checkedRes.rows[0] as { n?: number })?.n ?? 0);
+
+    return { checkedExpenses, exceptionsCreated, byRule };
 }
 
-export async function updateFinanceAuditExceptionStatusAsync(_id: number, _status: unknown, _actor?: FinanceActor) {
-    throw new Error("updateFinanceAuditExceptionStatusAsync: not yet migrated to PostgreSQL");
+export async function updateFinanceAuditExceptionStatusAsync(
+    id: number,
+    input: { status: "acknowledged" | "resolved" | "overridden"; notes?: string },
+    actor?: FinanceActor,
+) {
+    const actorId = Number((actor as { id?: unknown })?.id) || null;
+    const closing = input.status === "resolved" || input.status === "overridden";
+    const res = await queryPostgres(
+        `UPDATE finance_audit_exceptions
+         SET status = $2,
+             resolution_notes = COALESCE($3, resolution_notes),
+             resolved_at = CASE WHEN $4 THEN NOW() ELSE NULL END,
+             resolved_by_user_id = CASE WHEN $4 THEN $5::int ELSE NULL END
+         WHERE id = $1
+         RETURNING id,
+                   entity_type AS "entityType",
+                   entity_id AS "entityId",
+                   severity,
+                   rule_code AS "ruleCode",
+                   message,
+                   status,
+                   amount,
+                   currency,
+                   created_by_user_id AS "createdBy",
+                   created_at AS "createdAt",
+                   resolved_at AS "resolvedAt",
+                   resolved_by_user_id AS "resolvedBy",
+                   resolution_notes AS "resolutionNotes"`,
+        [id, input.status, input.notes ?? null, closing, actorId],
+    );
+    const row = res.rows[0];
+    if (!row) throw new Error("Audit exception not found.");
+    return row;
 }
 
 // generateFinanceMonthlyStatement is now natively exported above
 
 // ── Transparency / public snapshots ──────────────────────────────────
-export async function generatePublicSnapshot(..._args: unknown[]) {
-    return { id: 0 };
+// Controlled-publication flow: generate (draft) → publish (typed
+// confirmation phrase, matching the UI prompts) → archive. Confirmation
+// phrases mirror PortalFinanceTransparencyManager exactly.
+
+const SNAPSHOT_PUBLISH_CONFIRMATION = "PUBLISH FY SNAPSHOT";
+const AUDITED_PUBLISH_CONFIRMATION = "PUBLISH AUDITED STATEMENTS";
+
+function quarterWindow(fy: number, quarter?: "Q1" | "Q2" | "Q3" | "Q4" | null) {
+    if (!quarter) return { from: `${fy}-01-01`, to: `${fy + 1}-01-01` };
+    const startMonth = { Q1: 1, Q2: 4, Q3: 7, Q4: 10 }[quarter];
+    const endMonth = startMonth + 3;
+    const from = `${fy}-${String(startMonth).padStart(2, "0")}-01`;
+    const to = endMonth > 12 ? `${fy + 1}-01-01` : `${fy}-${String(endMonth).padStart(2, "0")}-01`;
+    return { from, to };
 }
 
-export async function publishPublicSnapshot(..._args: unknown[]) {
-    throw new Error("publishPublicSnapshot: not yet migrated to PostgreSQL");
+export async function generatePublicSnapshot(
+    actor: FinanceActor,
+    input: { fy: number; quarter?: "Q1" | "Q2" | "Q3" | "Q4"; currency: string },
+) {
+    const actorId = Number((actor as { id?: unknown })?.id);
+    if (!Number.isFinite(actorId) || actorId <= 0) throw new Error("An authenticated actor is required.");
+    const quarter = input.quarter ?? null;
+    const { from, to } = quarterWindow(input.fy, quarter);
+
+    // Aggregate from posted ledger entries (calendar FY, same convention as
+    // generateFinanceMonthlyStatementPostgres quarters).
+    const totalsRes = await queryPostgres(
+        `SELECT
+           COALESCE(SUM(amount) FILTER (WHERE txn_type = 'money_in'), 0)  AS income,
+           COALESCE(SUM(amount) FILTER (WHERE txn_type = 'money_out'), 0) AS spend
+         FROM finance_transactions_ledger
+         WHERE posted_status = 'posted' AND currency = $1 AND date >= $2::date AND date < $3::date`,
+        [input.currency, from, to],
+    );
+    const totals = totalsRes.rows[0] as { income?: number; spend?: number };
+    const totalIncome = Number(totals?.income ?? 0);
+    const totalExpenditure = Number(totals?.spend ?? 0);
+
+    const categoryRes = await queryPostgres(
+        `SELECT COALESCE(display_category, category, 'Uncategorized') AS name,
+                COALESCE(SUM(amount) FILTER (WHERE txn_type = 'money_in'), 0)  AS income,
+                COALESCE(SUM(amount) FILTER (WHERE txn_type = 'money_out'), 0) AS spent
+         FROM finance_transactions_ledger
+         WHERE posted_status = 'posted' AND currency = $1 AND date >= $2::date AND date < $3::date
+         GROUP BY COALESCE(display_category, category, 'Uncategorized')
+         ORDER BY name`,
+        [input.currency, from, to],
+    );
+    const restrictedRes = await queryPostgres(
+        `SELECT restricted_program AS program,
+                COALESCE(SUM(amount) FILTER (WHERE txn_type = 'money_in'), 0)  AS received,
+                COALESCE(SUM(amount) FILTER (WHERE txn_type = 'money_out'), 0) AS spent
+         FROM finance_transactions_ledger
+         WHERE posted_status = 'posted' AND currency = $1 AND date >= $2::date AND date < $3::date
+           AND restricted_program IS NOT NULL
+         GROUP BY restricted_program
+         ORDER BY restricted_program`,
+        [input.currency, from, to],
+    );
+
+    return withPostgresClient(async (client) => {
+        await client.query("BEGIN");
+        // The (fy, quarter, currency) unique constraint does NOT dedup the
+        // quarter-NULL annual snapshots (NULLs compare distinct), so resolve
+        // the existing row explicitly.
+        const existingRes = await client.query(
+            `SELECT id, status FROM finance_public_snapshots
+             WHERE fy = $1 AND quarter IS NOT DISTINCT FROM $2 AND currency = $3
+             LIMIT 1`,
+            [input.fy, quarter, input.currency],
+        );
+        const existing = existingRes.rows[0] as { id: number; status: string } | undefined;
+        // Draft → refresh in place. Archived → revive as a fresh draft.
+        // Published → block: the public number must be archived deliberately
+        // before it can be replaced.
+        if (existing && existing.status === "published") {
+            throw new Error(
+                "A published snapshot already exists for this period — archive it before regenerating.",
+            );
+        }
+
+        const net = totalIncome - totalExpenditure;
+        const categoryJson = JSON.stringify(categoryRes.rows);
+        const restrictedJson = JSON.stringify(restrictedRes.rows);
+        let id: number;
+        if (existing) {
+            const upd = await client.query(
+                `UPDATE finance_public_snapshots
+                 SET total_income = $1, total_expenditure = $2, net = $3,
+                     category_breakdown_json = $4, restricted_summary_json = $5,
+                     generated_by_user_id = $6, generated_at = NOW(),
+                     status = 'draft', publish_confirmation = NULL,
+                     published_at = NULL, published_by_user_id = NULL, archived_at = NULL
+                 WHERE id = $7
+                 RETURNING id`,
+                [totalIncome, totalExpenditure, net, categoryJson, restrictedJson, actorId, existing.id],
+            );
+            id = Number((upd.rows[0] as { id: number }).id);
+        } else {
+            const ins = await client.query(
+                `INSERT INTO finance_public_snapshots
+                   (fy, quarter, currency, snapshot_type, total_income, total_expenditure, net,
+                    category_breakdown_json, restricted_summary_json, generated_by_user_id)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                 RETURNING id`,
+                [
+                    input.fy,
+                    quarter,
+                    input.currency,
+                    quarter ? "quarterly" : "fy",
+                    totalIncome,
+                    totalExpenditure,
+                    net,
+                    categoryJson,
+                    restrictedJson,
+                    actorId,
+                ],
+            );
+            id = Number((ins.rows[0] as { id: number }).id);
+        }
+        await client.query("COMMIT");
+        return { id };
+    });
 }
 
-export async function archivePublicSnapshot(..._args: unknown[]) {
-    throw new Error("archivePublicSnapshot: not yet migrated to PostgreSQL");
+export async function publishPublicSnapshot(actor: FinanceActor, id: number, confirmation: string) {
+    const actorId = Number((actor as { id?: unknown })?.id) || null;
+    if (confirmation !== SNAPSHOT_PUBLISH_CONFIRMATION) {
+        throw new Error(`Confirmation phrase mismatch — type "${SNAPSHOT_PUBLISH_CONFIRMATION}" exactly.`);
+    }
+    const res = await queryPostgres(
+        `UPDATE finance_public_snapshots
+         SET status = 'published', publish_confirmation = $2, published_at = NOW(), published_by_user_id = $3
+         WHERE id = $1 AND status = 'draft'
+         RETURNING id`,
+        [id, confirmation, actorId],
+    );
+    if (!res.rows[0]) throw new Error("Snapshot not found or not in draft state.");
+    return { id };
 }
 
-export async function uploadAuditedStatement(_input: unknown, _actor: FinanceActor) {
-    throw new Error("uploadAuditedStatement: not yet migrated to PostgreSQL");
+export async function archivePublicSnapshot(_actor: FinanceActor, id: number) {
+    const res = await queryPostgres(
+        `UPDATE finance_public_snapshots
+         SET status = 'archived', archived_at = NOW()
+         WHERE id = $1 AND status <> 'archived'
+         RETURNING id`,
+        [id],
+    );
+    if (!res.rows[0]) throw new Error("Snapshot not found or already archived.");
+    return { id };
 }
 
-export async function publishAuditedStatement(..._args: unknown[]) {
-    throw new Error("publishAuditedStatement: not yet migrated to PostgreSQL");
+export async function uploadAuditedStatement(
+    actor: FinanceActor,
+    input: {
+        fy: number;
+        storedPath: string;
+        originalFilename: string;
+        auditorName?: string;
+        auditCompletedDate?: string;
+        notes?: string;
+    },
+): Promise<number> {
+    const actorId = Number((actor as { id?: unknown })?.id);
+    if (!Number.isFinite(actorId) || actorId <= 0) throw new Error("An authenticated actor is required.");
+    const res = await queryPostgres(
+        `INSERT INTO finance_audited_statements
+           (fy, auditor_name, audit_completed_date, stored_path, original_filename, notes, uploaded_by_user_id)
+         VALUES ($1, $2, $3::date, $4, $5, $6, $7)
+         RETURNING id`,
+        [
+            input.fy,
+            input.auditorName ?? null,
+            input.auditCompletedDate || null,
+            input.storedPath,
+            input.originalFilename,
+            input.notes ?? null,
+            actorId,
+        ],
+    );
+    return Number((res.rows[0] as { id: number }).id);
 }
 
-export async function archiveAuditedStatement(..._args: unknown[]) {
-    throw new Error("archiveAuditedStatement: not yet migrated to PostgreSQL");
+export async function publishAuditedStatement(actor: FinanceActor, id: number, confirmation: string) {
+    const actorId = Number((actor as { id?: unknown })?.id) || null;
+    if (confirmation !== AUDITED_PUBLISH_CONFIRMATION) {
+        throw new Error(`Confirmation phrase mismatch — type "${AUDITED_PUBLISH_CONFIRMATION}" exactly.`);
+    }
+    const res = await queryPostgres(
+        `UPDATE finance_audited_statements
+         SET status = 'published', publish_confirmation = $2, published_at = NOW(), published_by_user_id = $3
+         WHERE id = $1 AND status = 'private_uploaded'
+         RETURNING id`,
+        [id, confirmation, actorId],
+    );
+    if (!res.rows[0]) throw new Error("Audited statement not found or not in a publishable state.");
+    return { id };
+}
+
+export async function archiveAuditedStatement(_actor: FinanceActor, id: number) {
+    const res = await queryPostgres(
+        `UPDATE finance_audited_statements
+         SET status = 'archived', archived_at = NOW()
+         WHERE id = $1 AND status <> 'archived'
+         RETURNING id`,
+        [id],
+    );
+    if (!res.rows[0]) throw new Error("Audited statement not found or already archived.");
+    return { id };
 }
