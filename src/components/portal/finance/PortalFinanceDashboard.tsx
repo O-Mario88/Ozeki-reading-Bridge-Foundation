@@ -29,6 +29,17 @@ function todayIsoDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
+const CATEGORY_STYLE: Partial<
+  Record<FinanceInvoiceRecord["category"], { icon: string; background: string }>
+> = {
+  Donation: { icon: "🎁", background: "#e0f2fe" },
+  Contracts: { icon: "📄", background: "#ffedd5" },
+  Sponsorship: { icon: "🤝", background: "#f3e8ff" },
+  Training: { icon: "🎓", background: "#dcfce7" },
+  Assessment: { icon: "📊", background: "#fef9c3" },
+  "School Coaching visits and Follow Up": { icon: "🏫", background: "#fae8ff" },
+};
+
 export function PortalFinanceDashboard({
   summary,
   totalAssets,
@@ -316,14 +327,15 @@ export function PortalFinanceDashboard({
                         height: "44px",
                         borderRadius: "12px",
                         background:
-                          i === 0 ? "#e0f2fe" : i === 1 ? "#ffedd5" : "#f3e8ff",
+                          CATEGORY_STYLE[item.category]?.background ??
+                          "#f3f4f6",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         fontSize: "1.2rem",
                       }}
                     >
-                      {i === 0 ? "🚙" : i === 1 ? "💍" : "🎮"}
+                      {CATEGORY_STYLE[item.category]?.icon ?? "🧾"}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div
