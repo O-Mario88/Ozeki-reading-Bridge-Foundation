@@ -4,7 +4,9 @@ const nextConfig: NextConfig = {
   // Railway runs `node server.js` from the standalone build output, which
   // is only produced when output: "standalone" is set.
   output: "standalone",
-  serverExternalPackages: ["exceljs", "xlsx", "pg", "puppeteer", "puppeteer-core", "pdf-lib"],
+  // argon2 is a native module loaded via node-gyp-build; bundling it through
+  // webpack breaks its prebuild resolution ("No native build was found").
+  serverExternalPackages: ["exceljs", "xlsx", "pg", "puppeteer", "puppeteer-core", "pdf-lib", "argon2"],
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: false },
   compress: true,
