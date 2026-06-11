@@ -5,13 +5,7 @@
 !.env.example
 
 # Node
-# node_modules and .next live in *.nosync dirs (iCloud Drive skips those)
-# with symlinks at the canonical names — ignore both the symlinks and the
-# real dirs. Bare patterns (no trailing slash) are needed to match symlinks.
-node_modules
 node_modules/
-node_modules.nosync/
-.next
 frontend/node_modules/
 frontend/.next/
 frontend/out/
